@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   source:
     runs-on: ubuntu-24.04
@@ -154,14 +158,16 @@ jobs:
               'versionCode': item['versionCode'], 'abi': 'arm64-v8a'
           }, indent=2) + '\n')
           PY
-      - name: Sign trusted master builds
-        if: github.repository == 'AldenHe/huayoupu-ledger' && github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+      - name: Sign trusted main builds
+        if: github.repository == 'MisterGaohohoho/huiming-ledger' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          EXPECTED_CERT_SHA256: ${{ vars.ANDROID_CERT_SHA256 }}
         run: |
           set -euo pipefail
-          test -n "$ANDROID_KEYSTORE_BASE64" && test -n "$ANDROID_KEYSTORE_PASSWORD" || { echo 'Configure the Android signing secrets before publishing master builds.'; exit 1; }
+          test -n "$ANDROID_KEYSTORE_BASE64" && test -n "$ANDROID_KEYSTORE_PASSWORD" || { echo 'Configure the Android signing secrets before publishing main builds.'; exit 1; }
+          [[ "$EXPECTED_CERT_SHA256" =~ ^[a-f0-9]{64}$ ]] || { echo 'Configure ANDROID_CERT_SHA256 before signing.'; exit 1; }
           umask 077
           keystore="$RUNNER_TEMP/huiming-release.p12"
           trap 'rm -f "$keystore" "$RUNNER_TEMP/huiming-aligned.apk"' EXIT
@@ -171,6 +177,7 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/zipalign" -P 16 -f 4 "${unsigned[0]}" "$RUNNER_TEMP/huiming-aligned.apk"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks "$keystore" --ks-key-alias huiming-ledger --ks-pass env:ANDROID_KEYSTORE_PASSWORD --key-pass env:ANDROID_KEYSTORE_PASSWORD --out "$apk" "$RUNNER_TEMP/huiming-aligned.apk"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$apk" | tee ci-artifacts/signature.txt
+          grep -Fx "Signer #1 certificate SHA-256 digest: $EXPECTED_CERT_SHA256" ci-artifacts/signature.txt
           rm "${unsigned[0]}"
       - name: Record checksum and build provenance
         run: |
