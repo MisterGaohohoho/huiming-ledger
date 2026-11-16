@@ -111,13 +111,19 @@ object PlatformStatements {
     fun apply(store:LedgerStore,document:Document):Result=synchronized(store) {
         val db=store.writableDatabase;db.beginTransaction()
         try {
-            val known=store.all().mapTo(mutableSetOf()){it.capture.text};var saved=0;var updated=0;var duplicate=0;var review=0
+            val existing=store.all()
+            val known=existing.mapTo(mutableSetOf()){it.capture.text}
+            val ids=existing.mapTo(mutableSetOf()){it.id};var saved=0;var updated=0;var duplicate=0;var review=0
             for(entry in document.entries) {
                 if(entry.capture.text in known){duplicate++;continue}
                 when(val result=store.ingest(entry.capture,entry.bill)) {
                     is IngestResult.Saved -> {
-                        if(result.record.state==RecordState.REVIEW)review++ else if(result.updated)updated++ else if(result.supplemented)duplicate++ else saved++
-                        if(!result.updated && !result.supplemented && result.record.state==RecordState.POSTED && result.record.capture==entry.capture && entry.bill.refund==null)
+                        val created=ids.add(result.record.id)
+                        if(created){if(result.record.state==RecordState.REVIEW)review++ else saved++}
+                        else if(result.updated)updated++ else duplicate++
+                        // Explicitly choose a channel account for imports, including net refunds.
+                        // Ordinary manual entries retain the ledger's global-default semantics.
+                        if(created && result.record.state==RecordState.POSTED)
                             store.saveEdited(result.record.copy(note=entry.note),store.defaultAccount(document.platform)?.uid,true)
                         known+=entry.capture.text
                     }

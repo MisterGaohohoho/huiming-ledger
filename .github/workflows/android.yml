@@ -55,6 +55,7 @@ jobs:
           node scripts/check-tab-navigation.cjs
           node scripts/check-ledger-optimization.cjs
           node scripts/check-ledger-search.cjs
+          node scripts/check-offline-bills.cjs
 
   verify:
     runs-on: ubuntu-24.04

@@ -297,7 +297,7 @@ function openRecord(id,keepPreview=false,anchor=null){
  if(!r){notify('账单已不存在');return}
  const targetMonth=localMonth(r.occurredAt),targetFilter=r.direction==='INCOME'?'income':'expense';
  if(month!==targetMonth||filter!==targetFilter){month=targetMonth;filter=targetFilter;viewLimit=200;viewKey='';refresh()}
- if(page!=='ledger'&&page!=='stats'&&page!=='account-detail')go('ledger');
+ if(!['ledger','stats','account-detail','channel-ledger','offline-analysis'].includes(page))go('ledger');
  recordReturnControl=control||document.activeElement;applyRecord(records.find(x=>x.id===id)||r,keepPreview);showRecordPanel(origin);remember();
 }
 function pickImage(){if(draft?.id||draft?.recognitionTaskId){notify('原始截图仅供核对，不能替换；请从新增入口导入新截图');return}if(working){notify('正在识别，请稍候');return}if(native)native.importImage();else notify('请在 Android 应用中导入截图')}

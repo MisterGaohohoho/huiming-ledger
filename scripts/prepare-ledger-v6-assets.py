@@ -76,6 +76,13 @@ def main():
             inventory.append(entry)
         entry['original_notices'].append(dict(file=name, sha256=digest(target)))
     add_notice('Huiming:Ledger:GPL-3.0-only', 'project-GPL-3.0.txt', ROOT / 'LICENSE')
+    vendor = ROOT / 'app/src/main/assets/web/vendor'
+    analysis_lock = json.loads((vendor / 'analysis-vendor-lock.json').read_text(encoding='utf-8'))
+    for name, expected in analysis_lock['files'].items():
+        verify(vendor / name, expected)
+    for name in ['ECharts-LICENSE.txt', 'ECharts-NOTICE.txt']:
+        add_notice('Apache:ECharts:5.6.0', name, vendor / name)
+    add_notice('Personal-Bill:analysis:MIT', 'Personal-Bill-LICENSE.txt', vendor / 'Personal-Bill-LICENSE.txt')
     add_notice('PaddlePaddle:PaddleOCR:V6-Tiny', 'PaddleOCR-Apache-2.0.txt', ROOT / '.tools/ocr-ab/sdk/LICENSE')
     for notice in lock['notices']:
         coordinate = 'org.opencv:opencv:4.12.0-minimal' if notice['file'].startswith('OpenCV') else 'com.microsoft.onnxruntime:onnxruntime-android:1.21.1-reduced'

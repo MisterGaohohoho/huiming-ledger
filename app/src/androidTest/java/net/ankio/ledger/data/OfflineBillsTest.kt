@@ -37,6 +37,8 @@ class OfflineBillsTest {
         assertEquals(original.id,store.all().single().id)
         assertEquals(7_000L,store.get(original.id)!!.bill.amountCents)
         assertEquals(93_000L,store.accounts().single { it.uid==account.uid }.amountCents)
+        val repeatRefund=PlatformStatements.apply(store,wx(status="已退款(￥30.00)"))
+        assertEquals(0,repeatRefund.saved);assertEquals(1,repeatRefund.duplicates)
         assertEquals(7_000L,OfflineAnalytics(store).summary(query("wechat")).getJSONObject("totals").getLong("expense"))
         PlatformStatements.apply(store,wx()) // Old exports must never undo a newer refund.
         assertEquals(7_000L,store.get(original.id)!!.bill.amountCents)
@@ -49,6 +51,23 @@ class OfflineBillsTest {
         assertEquals(saved.id,store.all().single().id)
         assertEquals(1,PlatformStatements.apply(store,wx(status="已退款")).updated)
         assertEquals(0L,OfflineAnalytics(store).summary(query()).getJSONObject("totals").getLong("expense"))
+    }
+
+    @Test fun newRefundImportsUseChannelAccountAndDeletionReversesItsNetEffect() {
+        val global=store.saveAccount(LedgerAccount(name="通用账户",amountCents=100_000))
+        val channel=store.saveAccount(LedgerAccount(name="微信账户",amountCents=50_000))
+        store.setDefaultAccount(global.uid)
+        store.setChannelDefaultAccount("wechat",channel.uid)
+        assertEquals(1,PlatformStatements.apply(store,wx(status="已退款(￥30.00)")).saved)
+        val record=store.all().single()
+        assertEquals(channel.uid,record.accountUid)
+        assertEquals("午餐",record.note)
+        assertEquals(100_000L,store.getAccount(global.id)!!.amountCents)
+        assertEquals(43_000L,store.getAccount(channel.id)!!.amountCents)
+        store.delete(record.id)
+        assertEquals(50_000L,store.getAccount(channel.id)!!.amountCents)
+        assertEquals(1,PlatformStatements.apply(store,wx(status="已退款",order="FULL-REFUND-ORDER")).saved)
+        assertEquals(50_000L,store.getAccount(channel.id)!!.amountCents)
     }
 
     @Test fun filtersKeepChannelsPeriodsAndPendingRecordsSeparate() {
@@ -88,5 +107,29 @@ class OfflineBillsTest {
         }
         try{PlatformStatements.read(ByteArrayInputStream(csv.toByteArray()),"alipay");fail("Wrong channel accepted")}
         catch(_:IllegalArgumentException){}
+    }
+
+    @Test fun xlsxSupportsSharedStringsInlineCellsAndRejectsFormulas() {
+        fun workbook(formula:Boolean=false):ByteArray {
+            val rows=listOf(header,listOf("2026-11-10 12:00:00","餐饮","测试商户","午餐","支出","12.34","零钱","支付成功","XLSX-ORDER","SHOP-ORDER",""))
+            val strings=rows.flatten().distinct()
+            val shared="<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">"+strings.joinToString(""){"<si><t>$it</t></si>"}+"</sst>"
+            val sheet="<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData>"+rows.mapIndexed{r,row->
+                "<row r=\"${r+1}\">"+row.mapIndexed{c,value->
+                    val pos="${('A'.code+c).toChar()}${r+1}"
+                    if(r==1&&c==2)"<c r=\"$pos\" t=\"inlineStr\"><is><t>$value</t></is></c>"
+                    else "<c r=\"$pos\" t=\"s\">${if(formula&&r==1&&c==5)"<f>1+1</f>" else ""}<v>${strings.indexOf(value)}</v></c>"
+                }.joinToString("")+"</row>"
+            }.joinToString("")+"</sheetData></worksheet>"
+            val out=java.io.ByteArrayOutputStream()
+            java.util.zip.ZipOutputStream(out).use{zip->for((name,text)in mapOf("xl/sharedStrings.xml" to shared,"xl/worksheets/sheet1.xml" to sheet)){
+                zip.putNextEntry(java.util.zip.ZipEntry(name));zip.write(text.toByteArray());zip.closeEntry()
+            }};return out.toByteArray()
+        }
+        val result=PlatformStatements.read(ByteArrayInputStream(workbook()),"wechat")
+        assertEquals(1234L,result.entries.single().bill.amountCents)
+        assertEquals("测试商户",result.entries.single().bill.merchant)
+        try{PlatformStatements.read(ByteArrayInputStream(workbook(true)),"wechat");fail("Formula accepted")}
+        catch(_:IllegalStateException){}
     }
 }
