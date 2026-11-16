@@ -84,7 +84,7 @@ internal object AccountPostings {
         }
         var uid=stored.uid
         if(uid==null && assignDefault && stored.state==RecordState.POSTED.name) {
-            val channel=if(stored.source==Source.MANUAL.name)null else when(stored.origin) {
+            val channel=when(stored.origin) {
                 PaymentApps.WECHAT -> "wechat"
                 PaymentApps.ALIPAY -> "alipay"
                 else -> null

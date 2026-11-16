@@ -192,7 +192,7 @@ object LedgerCsvImport {
             rest.startsWith('\t') || rest.startsWith('\r') || rest.startsWith('\n'))rest else value
     }
 
-    private fun parse(text:String):List<List<String>> {
+    internal fun parse(text:String):List<List<String>> {
         val rows=mutableListOf<List<String>>()
         var row=mutableListOf<String>()
         val cell=StringBuilder()
