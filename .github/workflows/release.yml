@@ -55,7 +55,7 @@ jobs:
           set -euo pipefail
           commit=$(git rev-parse HEAD)
           test "$(git rev-parse "$RELEASE_TAG^{commit}")" = "$commit"
-          run_id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow android.yml --commit "$commit" --branch main --event push --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          run_id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow android.yml --commit "$commit" --branch main --limit 20 --json databaseId,event --jq '[.[] | select(.event == "push" or .event == "workflow_dispatch")][0].databaseId // empty')
           test -n "$run_id" || { echo 'Push this commit to main and run Android checks before publishing.'; exit 1; }
           gh run watch "$run_id" --repo "$GITHUB_REPOSITORY" --exit-status --interval 15
           gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --name android-arm64 --dir release
