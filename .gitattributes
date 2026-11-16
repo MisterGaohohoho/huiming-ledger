@@ -18,3 +18,5 @@ gradlew text eol=lf
 LICENSE -text
 app/src/main/assets/licenses/** -text
 third_party/ocr-runtime/licenses/** -text
+app/src/main/assets/web/vendor/*LICENSE.txt -text
+app/src/main/assets/web/vendor/*NOTICE.txt -text

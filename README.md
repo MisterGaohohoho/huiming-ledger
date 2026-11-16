@@ -10,7 +10,13 @@
 
 <p align="center">Android 11+ · 离线 OCR · 本地账本 · GPL-3.0-only</p>
 
-<p align="center"><a href="https://github.com/AldenHe/huayoupu-ledger/releases/latest">下载 Android APK</a> · <a href="https://github.com/AldenHe/huayoupu-ledger/actions/workflows/android.yml">构建与测试</a></p>
+<p align="center"><a href="https://github.com/MisterGaohohoho/huiming-ledger/releases">下载本 Fork APK</a> · <a href="https://github.com/MisterGaohohoho/huiming-ledger/actions/workflows/android.yml">构建与测试</a></p>
+
+本 Fork 基于 [AldenHe/huayoupu-ledger](https://github.com/AldenHe/huayoupu-ledger)，已同步至上游 `ea07c243`（0.5.114-v6）。新增 [Personal-Bill](https://github.com/MisterGaohohoho/Personal-Bill) 月报、年报与平台账单分析的离线适配，直接使用花有谱的本地账本。版本为 **0.5.115-offline.1**，以预发布版提供。
+
+首页进入 **微信账单 / 支付宝账单**，导入官方 CSV 或 XLSX；统计页进入 **月报与年报**。账单、分类、退款、报销和账户余额共用原有记账数据，详情编辑后同步刷新。[使用说明与适配范围](.github/OFFLINE_BILLS.md)
+
+本 Fork 使用独立长期签名，与原作者 APK 签名不同。切换前请导出完整备份，再卸载原版、安装本 Fork 并恢复备份；后续本 Fork 版本沿用同一签名。
 
 ## 能做什么
 
@@ -40,11 +46,11 @@
 
 ## 版本更新
 
-[0.5.114-v6 更新说明（对比 0.5.88-v6）](.github/RELEASE_NOTES.md)
+[0.5.115-offline.1 更新说明](.github/RELEASE_NOTES.md)
 
 ## 界面预览
 
-以下为本次更新提供的**手机实机截图**；点击图片可查看大图。
+以下为上游原有功能的**手机实机截图**；点击图片可查看大图。新增离线分析页面另经浏览器自动化验证，尚未完成物理手机验收。
 
 | 首页账本 | 收支统计 | 资产管理 |
 | :---: | :---: | :---: |

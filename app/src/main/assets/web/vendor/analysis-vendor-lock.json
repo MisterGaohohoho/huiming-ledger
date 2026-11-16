@@ -1,0 +1,11 @@
+{
+  "version": "5.6.0",
+  "url": "https://registry.npmjs.org/echarts/-/echarts-5.6.0.tgz",
+  "archiveSha256": "e1b82487dd7f8d9f0438eec1f1433051148e0095ac7a15d4db890afda45cf610",
+  "files": {
+    "echarts.min.js": "bf4a223524e40b77c304bec67e1222cf551f14880cf42c69dc046558e11c07b1",
+    "ECharts-LICENSE.txt": "634293835b43a6dd2094fa39182a3d9a6b9ca43b7fdb9ac354e8037af2a3093a",
+    "ECharts-NOTICE.txt": "fa99ac3af859d0e13166906dc53a73ad34a08898da7e8ae83407275496e9e30c",
+    "Personal-Bill-LICENSE.txt": "2c3ca2346545a8122ca8c4257b1ac95799d45a228d72be95f97fa0a90fb4ed12"
+  }
+}

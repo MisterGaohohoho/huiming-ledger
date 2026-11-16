@@ -32,6 +32,26 @@ class LedgerWebBridge(private val activity: MainActivity) {
     private val app get() = activity.ledger
 
     @JavascriptInterface
+    fun offlineSummary(json: String): String = offlineRead(json, true)
+
+    @JavascriptInterface
+    fun offlineRecords(json: String): String = offlineRead(json, false)
+
+    @JavascriptInterface
+    fun importPlatformBills(platform: String) {
+        if (platform in setOf("wechat", "alipay")) activity.runOnUiThread { activity.platformImports.open(platform) }
+    }
+
+    private fun offlineRead(json: String, summary: Boolean): String = try {
+        require(json.length <= 4096) { "筛选条件过长" }
+        synchronized(app.store) {
+            val query = net.ankio.ledger.data.OfflineAnalytics(app.store)
+            (if (summary) query.summary(JSONObject(json)) else query.details(JSONObject(json)))
+                .put("revision", app.revision.value.toString()).put("budgetCents",app.monthlyBudget.cents()).toString()
+        }
+    } catch (error: Exception) { failure(error.message ?: "统计读取失败，请重试").toString() }
+
+    @JavascriptInterface
     fun snapshot(): String = buildSnapshot().toString()
 
     @JavascriptInterface

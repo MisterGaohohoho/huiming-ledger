@@ -47,6 +47,7 @@ class MainActivity : Activity() {
     private var pendingChannel: ChannelSettings.Channel? = null
     internal val permissionSetup by lazy { PermissionSetupController(this) }
     internal val billReports by lazy { BillReportController(this) }
+    internal val platformImports by lazy { PlatformImportController(this) }
     @Volatile private var savedPageState: String? = null
     @Volatile private var previewBytes: ByteArray? = null
     private val localOrigin = "https://appassets.androidplatform.net"
@@ -381,6 +382,8 @@ class MainActivity : Activity() {
         if (resultCode!=RESULT_OK) return
         val uri=data?.data ?: return
         when(requestCode) {
+            PlatformImportController.WECHAT -> platformImports.read(uri,"wechat")
+            PlatformImportController.ALIPAY -> platformImports.read(uri,"alipay")
             CSV_IMPORT_REQUEST -> uiScope.launch {
                 dispatch("fileOperation",JSONObject.quote("正在检查 CSV"))
                 try {

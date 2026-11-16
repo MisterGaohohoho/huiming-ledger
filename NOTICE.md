@@ -19,6 +19,9 @@
 | LLVM libc++ | 原生 C++ 运行库 | Apache-2.0 with LLVM Exceptions 及完整 NDK 通知 |
 | AndroidX、Kotlin/coroutines、Guava ListenableFuture、JetBrains Annotations、JSpecify | 基础运行功能 | 发布者 Apache-2.0 声明及构件内原文 |
 | Font Awesome Free 6.5.2 | CSS 与字体图标 | CSS MIT；woff2 字体 SIL OFL 1.1；SVG/JS 图标 CC BY 4.0 |
+| Apache ECharts 5.6.0 | 离线账单图表 | Apache-2.0；完整 LICENSE / NOTICE 位于 `app/src/main/assets/web/vendor/` |
+
+本 Fork 的月报、年报与支付平台分析参考并适配自 [MisterGaohohoho/Personal-Bill](https://github.com/MisterGaohohoho/Personal-Bill)（MIT）。保留完整 `Personal-Bill-LICENSE.txt`；统计查询、导入与记账联动改为花有谱原生 SQLite 实现，交互适配到 APK WebView。第三方声明和 ECharts 固定哈希随源码及应用内许可页提供。适配范围见 [.github/OFFLINE_BILLS.md](.github/OFFLINE_BILLS.md)。
 
 当前 V6 不打包 ML Kit。随包 Maven 目录按实际运行坐标过滤，不能将旧 ML Kit 的“65 个组件”作为 V6 数量。生成清单包含坐标、SHA-256 和原文链接，可在“关于 → 许可与第三方声明”离线查看。ONNX 汇总通知也覆盖本精简构建未启用的模块，不以通知出现与否推断实际链接结果。
 
