@@ -91,14 +91,25 @@ internal class PlatformImportController(private val activity:MainActivity) {
             val ids=listOf<String?>(null,"@new")+accounts.map{it.uid}
             val labels=listOf("暂不关联账户","新建同名账户（初始余额为 0）")+accounts.map{it.name}
             val spinner=android.widget.Spinner(activity)
-            spinner.adapter=android.widget.ArrayAdapter(activity,android.R.layout.simple_spinner_dropdown_item,labels)
+            spinner.minimumHeight=sheet.dp(56)
+            spinner.adapter=object:android.widget.ArrayAdapter<String>(activity,android.R.layout.simple_spinner_dropdown_item,labels) {
+                private fun fit(view:android.view.View):android.view.View {
+                    (view as android.widget.TextView).apply {
+                        maxLines=2;ellipsize=android.text.TextUtils.TruncateAt.END
+                        minimumHeight=sheet.dp(48)
+                    }
+                    return view
+                }
+                override fun getView(position:Int,convertView:android.view.View?,parent:android.view.ViewGroup)=fit(super.getView(position,convertView,parent))
+                override fun getDropDownView(position:Int,convertView:android.view.View?,parent:android.view.ViewGroup)=fit(super.getDropDownView(position,convertView,parent))
+            }
             val match=accounts.indexOfFirst{net.ankio.ledger.data.LedgerAccount.nameKey(it.name)==net.ankio.ledger.data.LedgerAccount.nameKey(asset)}
             val initial=if(match>=0)match+2 else 0;mapping[asset]=ids[initial];spinner.setSelection(initial)
             spinner.onItemSelectedListener=object:android.widget.AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(parent:android.widget.AdapterView<*>?,view:android.view.View?,position:Int,id:Long){mapping[asset]=ids[position]}
                 override fun onNothingSelected(parent:android.widget.AdapterView<*>?){}
             }
-            sheet.content.addView(spinner,android.widget.LinearLayout.LayoutParams(-1,sheet.dp(56)))
+            sheet.content.addView(spinner,android.widget.LinearLayout.LayoutParams(-1,-2))
         }
         document.errors.take(6).forEach{sheet.content.addView(sheet.text(it,12,MintDialog.MUTED))}
         sheet.content.addView(sheet.text("使用创建时间作为账单日期，保留父子分类和备注。原文件没有订单号与商户字段，疑似重复请核对后入账。关联账户会按已入账收支调整余额，导入历史账单后可在资产页校准余额。",13,MintDialog.MUTED))
