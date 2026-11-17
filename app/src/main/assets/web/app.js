@@ -56,7 +56,7 @@ function render(){
  drawChart(list,new Date(),ledgerView?.summary?.days);
  const previous=localMonth(new Date(Number(y),Number(m)-2,1).getTime()),before=ledgerView?.summary?.previous?.[selected]??sums(records.filter(r=>r.state==='POSTED'&&localMonth(r.occurredAt)===previous))[selected];
  $('home-change').textContent=before?`较上月 ${total[selected]>=before?'↑':'↓'} ${Math.abs((total[selected]-before)/before*100).toFixed(0)}%`:'本月每日趋势';
- MonthlyBudget.render(total.expense,selected==='income',month);$('monthly-budget').hidden=!LedgerScope.isMonth(month)||!!LedgerScope.channel||!!statsReimbursement;
+ MonthlyBudget.render(total.expense,selected==='income',month);$('monthly-budget').hidden=selected==='income'||!LedgerScope.isMonth(month)||!!LedgerScope.channel||!!statsReimbursement;
  const search=query.toLowerCase();
  const shown=records.filter(r=>(r.state==='POSTED'||r.state==='REVIEW')&&(query||LedgerScope.contains(month,r.occurredAt))
   &&(filter==='income'?r.direction==='INCOME':r.direction!=='INCOME')
@@ -231,8 +231,10 @@ function syncRecordHistory(){
  if(revision(current)===revision(draft))return;
  const wasDirty=editorDirty(),edits=readDraft(),financialChanged=current.amountCents!==draft.amountCents;
  const merchant=edits.merchant===(draft._storedMerchant??draft.merchant)?current.merchant:edits.merchant;
- const tags=JSON.stringify(edits.tags)===JSON.stringify(draft.tags||[])?current.tags:edits.tags;
- const requiresReimbursement=edits.requiresReimbursement===!!draft.requiresReimbursement?!!current.requiresReimbursement:edits.requiresReimbursement;
+ // The draft already contains local edits after recreation; compare with the saved baseline.
+ const baseline=editorBaseline?JSON.parse(editorBaseline):draft;
+ const tags=JSON.stringify(edits.tags)===JSON.stringify(baseline.tags||[])?current.tags:edits.tags;
+ const requiresReimbursement=edits.requiresReimbursement===!!baseline.requiresReimbursement?!!current.requiresReimbursement:edits.requiresReimbursement;
  draft={...draft,...recordWithDetails(current),...edits,merchant,tags,requiresReimbursement,_storedMerchant:current.merchant,amount:financialChanged?String(current.amountCents/100):edits.amount};
  updateEditor();if(!wasDirty)editorBaseline=JSON.stringify(readDraft());remember();
 }

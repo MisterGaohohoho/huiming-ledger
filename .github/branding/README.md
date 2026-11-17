@@ -1,12 +1,11 @@
-# 花有谱图标
+# 有数应用图标
 
-正式采用“账页开花”：账单展开成为花瓣，对应“花钱有谱”。
+账页对应每笔记录，对勾表达核对清楚；主张为「每笔清楚，心中有数」。图形由基础几何形状绘制，采用项目 GPL-3.0-only 许可。
 
-- `huayoupu-icon.png`：AI 生成的 1024 × 1024 原图，用于 README 等品牌展示。
-- `huayoupu-prompt.txt`：生成该图的完整最终提示词；模型为 gpt-image-2.5，通过 toImage 已配置备用服务生成。
-- Android 前景：`app/src/main/res/drawable-nodpi/huayoupu_icon.png`，从原图提取真实轮廓，透明留白内最大半径约 300px，适配圆形和其他系统裁切。
-- Android 背景：`huayoupu_coral`（`#EE7756`）。
-- 单色主题：`huayoupu_monochrome.png`，沿用同一轮廓与留白，由 `ic_ledger.xml` 引用。
+- `youshu-icon.png`：用于仓库展示的完整应用图标。
+- Android 前景：`app/src/main/res/drawable-nodpi/youshu_icon.png`。
+- Android 背景：`youshu_teal`，深绿 `#176B5B`。
+- `youshu_monochrome.png`：系统主题单色图标。
+- `youshu_notification_foreground.png` / `youshu_notification_small.png`：通知中表示应用身份的图形。
 
-桌面显示名称为“花有谱”，完整产品名为“花有谱记账”，主张为“少点手动，收支有谱。”
-包名、备份结构、签名与识别服务组件保持兼容。历史图标保存在版本历史中。
+应用内页面继续使用原有色调、组件和功能图标。本次只替换应用身份图标，不改包名、数据格式或本 Fork 签名。历史图标来源保留在 Git 历史中。

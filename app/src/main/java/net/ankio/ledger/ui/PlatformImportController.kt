@@ -38,6 +38,15 @@ internal class PlatformImportController(private val activity:MainActivity) {
             val sheet=MintDialog(activity,"${if(document.platform=="wechat")"微信" else "支付宝"}账单导入","文件在本机解析")
             sheet.content.addView(sheet.text("可处理 ${document.entries.size} 笔",20,MintDialog.INK,true))
             sheet.content.addView(sheet.text("跳过 ${document.skipped} 行 · 需核对 ${document.errors.size} 行",14,MintDialog.MUTED))
+            val dates=document.entries.map{it.bill.occurredAt}
+            val date=java.text.SimpleDateFormat("yyyy-MM-dd",java.util.Locale.ROOT)
+            if(dates.isNotEmpty())sheet.content.addView(sheet.text("${date.format(java.util.Date(dates.min()))} 至 ${date.format(java.util.Date(dates.max()))}",13,MintDialog.MUTED))
+            for(direction in net.ankio.ledger.core.Direction.entries){
+                val entries=document.entries.filter{it.bill.direction==direction}
+                sheet.content.addView(sheet.text("${if(direction==net.ankio.ledger.core.Direction.INCOME)"收入" else "支出"} ${entries.size} 笔 · ¥${Money.format(entries.sumOf{it.bill.amountCents?:0})}",14,MintDialog.INK))
+            }
+            val account=synchronized(activity.ledger.store){activity.ledger.store.defaultAccount(document.platform)}
+            sheet.content.addView(sheet.text("新账单关联账户：${account?.name?:"未设置账户"}",13,MintDialog.MUTED))
             document.entries.take(4).forEach { entry -> sheet.content.addView(sheet.text("${entry.bill.merchant.take(24)} · ¥${Money.format(entry.bill.amountCents!!)}${if(entry.bill.refund!=null)"（退款后）" else ""}",14,MintDialog.INK)) }
             if(document.errors.isNotEmpty()) {
                 sheet.label("以下行不会导入")

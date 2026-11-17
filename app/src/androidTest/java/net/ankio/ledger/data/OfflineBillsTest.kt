@@ -152,6 +152,35 @@ class OfflineBillsTest {
         assertEquals(1,UnifiedBillImport.apply(store,changed,mapOf("微信钱包" to store.accounts().single().uid)).second)
         assertEquals(-1600L,store.accounts().single().amountCents)
         assertEquals(1,UnifiedBillImport.jiezhang(listOf(header,row.toMutableList().apply{this[5]="1.001"})).errors.size)
+        store.delete(store.all().first{it.state==RecordState.POSTED}.id)
+        assertEquals(1,UnifiedBillImport.preview(store,doc).duplicates)
+        assertEquals(0,UnifiedBillImport.apply(store,doc,emptyMap()).first)
+        assertEquals(0L,store.accounts().single().amountCents)
+    }
+
+    @Test fun jiezhangXlsxDetectsNumericAmountsAndTextDatesWithBlankNotes() {
+        val rows=listOf(listOf("子分类","父分类","类型","资产","备注","金额","创建时间","更新时间"),
+            listOf("地铁","交通","支出","微信钱包","","3.20","2026-03-07 08:00:00","2026-03-07 08:01:00"),
+            listOf("工资","收入","收入","银行卡","合成数据","1234.56","2026-03-08 09:00:00","2026-03-08 09:00:01"))
+        val sheet="<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData>"+rows.mapIndexed{r,row->
+            "<row r=\"${r+1}\">"+row.mapIndexed{c,value->
+                val pos="${('A'.code+c).toChar()}${r+1}"
+                if(r>0&&c==5)"<c r=\"$pos\" t=\"n\"><v>$value</v></c>"
+                else "<c r=\"$pos\" t=\"inlineStr\"><is><t>$value</t></is></c>"
+            }.joinToString("")+"</row>"
+        }.joinToString("")+"</sheetData></worksheet>"
+        val out=java.io.ByteArrayOutputStream()
+        java.util.zip.ZipOutputStream(out).use{zip->
+            zip.putNextEntry(java.util.zip.ZipEntry("xl/worksheets/sheet1.xml"));zip.write(sheet.toByteArray());zip.closeEntry()
+        }
+        val doc=UnifiedBillImport.read(out.toByteArray().inputStream()) as UnifiedBillImport.Jiezhang
+        assertTrue(doc.errors.isEmpty());assertEquals(listOf(320L,123456L),doc.rows.map{it.record.bill.amountCents})
+        assertEquals(time("2026-03-07T08:00:00"),doc.rows.first().record.bill.occurredAt)
+        assertEquals("",doc.rows.first().record.note);assertEquals("交通/地铁",doc.rows.first().record.bill.category)
+        assertEquals(2,UnifiedBillImport.apply(store,doc,emptyMap()).first)
+        val totals=OfflineAnalytics(store).summary(query("","all","all")).getJSONObject("totals")
+        assertEquals(320L,totals.getLong("expense"));assertEquals(123456L,totals.getLong("income"))
+        assertEquals(2,UnifiedBillImport.preview(store,doc).duplicates)
     }
 
     @Test fun yearAllAndCustomScopesAgreeAcrossLedgerReportsAndPagination() {

@@ -55,6 +55,9 @@
    bindRows($('sheet-content'));if(hasMore)$('unified-more').onclick=load;
   }catch(error){notify(error.message)}}load();
  }
+ const oldEditor=updateEditor;
+ document.querySelector('#import-form .card-heading').insertAdjacentHTML('afterend','<p class="record-provenance" id="record-provenance" hidden></p>');
+ window.updateEditor=function(){oldEditor();const provider=draft?.paymentProvider||'',label=draft?captureName(draft):'';const text=[provider?names[provider]:'',label].filter(Boolean).join(' · ');$('record-provenance').hidden=!draft?.id||!text;$('record-provenance').textContent=text};
  const originalStats=drawStats;
  window.drawStats=function(){
   chips();if(!native?.offlineSummary){originalStats();return}
@@ -84,7 +87,7 @@
   }catch(error){report=null;chart?.clear();$('stats-error').hidden=false;$('stats-error').textContent=error.message;stats.querySelector('.analysis-card').hidden=true;$('ranking').textContent='';$('integrated-top').textContent='';$('trend-caption').textContent=''}
  };
  function drawTrend(){
-  if(!report)return;chart??=echarts.init($('integrated-trend'));chart.off('click');
+  if(!report)return;if(!chart)chart=echarts.init($('integrated-trend'));chart.off('click');
   const keys=statsType==='all'?['expense','income']:[statsType],colors={expense:'#48b99c',income:'#87baff'};
   chart.setOption({animation:false,tooltip:{trigger:'axis',valueFormatter:v=>'¥'+Number(v).toFixed(2)},legend:{bottom:0},grid:{left:48,right:14,top:18,bottom:54},xAxis:{type:'category',data:report.trend.map(x=>x.label),axisLabel:{fontSize:10,hideOverlap:true}},yAxis:{type:'value',axisLabel:{formatter:v=>Math.abs(v)>=10000?(v/10000)+'万':v,fontSize:10}},series:keys.map(key=>({name:key==='income'?'收入':'支出',type:report.trendUnit==='day'?'line':'bar',showSymbol:false,itemStyle:{color:colors[key]},data:report.trend.map(x=>x[key]/100)}))},true);
   chart.on('click',event=>{const bucket=report?.trend[event.dataIndex];if(bucket)showDetails({mode:'custom',period:bucket.period,direction:event.seriesName==='收入'?'INCOME':'EXPENSE'},bucket.label+'明细')});

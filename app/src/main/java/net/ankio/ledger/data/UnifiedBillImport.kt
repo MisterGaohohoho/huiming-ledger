@@ -64,7 +64,10 @@ object UnifiedBillImport {
 
     data class Selection(val fresh:List<Item>,val duplicates:Int,val possible:Set<String>)
     fun preview(store:LedgerStore,document:Jiezhang):Selection=synchronized(store) {
-        val existing=store.all();val uids=existing.mapTo(mutableSetOf()){it.uid}
+        val existing=store.all()
+        // Deleted rows still own their import identity, so re-import cannot resurrect them.
+        val uids=mutableSetOf<String>()
+        store.readableDatabase.rawQuery("SELECT uid FROM records",null).use{c->while(c.moveToNext())uids+=c.getString(0)}
         val fresh=document.rows.filter { uids.add(it.record.uid) }
         val candidates=existing.filter{it.state==RecordState.POSTED}.groupBy { it.bill.amountCents to it.bill.direction }
         val possible=fresh.filter { item -> candidates[item.record.bill.amountCents to item.record.bill.direction].orEmpty().any { old ->
