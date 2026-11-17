@@ -60,7 +60,7 @@ class ImageImporter(private val app: LedgerApp, private val client: net.ankio.le
                 val message=(error as? RecognitionException)?.userMessage ?: "识别失败，请换一张清晰截图重试"
                 app.tasks.update(taskId,"FAILED",message);app.changed()
                 if (generation == token) state.value = ImageImportState.Failed(message)
-            } finally { if(generation==token)activeTask=null }
+            } finally { if(generation==token) { activeTask=null;if(!app.tasks.exists(taskId))previewBytes=null } }
         }
     }
 }

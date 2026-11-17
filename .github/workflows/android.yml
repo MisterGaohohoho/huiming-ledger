@@ -25,6 +25,7 @@ jobs:
       - name: Check public sources and pinned notices
         run: |
           python -m unittest discover -s scripts/tests
+          python scripts/check-app-branding.py
           python scripts/check-public-source.py --output output/Youshu-Ledger-source.zip
       - uses: actions/upload-artifact@v4
         with:
@@ -56,6 +57,7 @@ jobs:
           node scripts/check-ledger-optimization.cjs
           node scripts/check-ledger-search.cjs
           node scripts/check-offline-bills.cjs
+          node scripts/check-ledger-selection.cjs
 
   verify:
     runs-on: ubuntu-24.04
@@ -103,7 +105,7 @@ jobs:
           arch: x86_64
           profile: pixel_3a
           disable-animations: true
-          script: bash ./gradlew -PledgerAbi=x86_64 '-Pandroid.testInstrumentationRunnerArguments.class=net.ankio.ledger.LicenseDisclosureTest,net.ankio.ledger.ExecutionLogTest,net.ankio.ledger.ocr.LocalModeSettingsTest,net.ankio.ledger.data.LedgerCursorOptimizationTest,net.ankio.ledger.data.LedgerCandidateOptimizationTest,net.ankio.ledger.data.RecognitionRecoveryOptimizationTest,net.ankio.ledger.data.LedgerQuery056Test,net.ankio.ledger.data.AutomaticSupplementTest,net.ankio.ledger.data.RefundPersistenceTest,net.ankio.ledger.data.LedgerIdentity056Test,net.ankio.ledger.data.MerchantEnrichmentTest,net.ankio.ledger.data.LedgerUndo056Test,net.ankio.ledger.data.CaptureSupplementTest,net.ankio.ledger.PaymentRecognitionQueueTest,net.ankio.ledger.PaymentVisitsTest,net.ankio.ledger.BackgroundSettingsSyncTest,net.ankio.ledger.PermissionTrimTest,net.ankio.ledger.CaptureReadinessTest,net.ankio.ledger.CaptureRestoreTest,net.ankio.ledger.RecognitionBannerFallbackTest,net.ankio.ledger.SetupStepsTest,net.ankio.ledger.ocr.IconGeneralityTest,net.ankio.ledger.ocr.LocalHeaderIconTest,net.ankio.ledger.IconLocationRegressionTest,net.ankio.ledger.MerchantIconTest,net.ankio.ledger.ocr.LocalRecognitionClientTest,net.ankio.ledger.data.AccountPostingTest,net.ankio.ledger.data.ChannelDefaultAccountTest,net.ankio.ledger.data.MonthlyBudgetTest,net.ankio.ledger.data.ReimbursementTest,net.ankio.ledger.data.BillReportTest,net.ankio.ledger.data.ReportEvidenceTest,net.ankio.ledger.data.AccountNameTest,net.ankio.ledger.data.RefundBackupTest,net.ankio.ledger.AccountIdentityCurrencyUiTest,net.ankio.ledger.BillReportUiTest,net.ankio.ledger.data.OfflineBillsTest' :app:connectedDebugAndroidTest --stacktrace
+          script: bash ./gradlew -PledgerAbi=x86_64 '-Pandroid.testInstrumentationRunnerArguments.class=net.ankio.ledger.LicenseDisclosureTest,net.ankio.ledger.ExecutionLogTest,net.ankio.ledger.ocr.LocalModeSettingsTest,net.ankio.ledger.data.LedgerCursorOptimizationTest,net.ankio.ledger.data.LedgerCandidateOptimizationTest,net.ankio.ledger.data.RecognitionRecoveryOptimizationTest,net.ankio.ledger.data.LedgerQuery056Test,net.ankio.ledger.data.AutomaticSupplementTest,net.ankio.ledger.data.RefundPersistenceTest,net.ankio.ledger.data.LedgerIdentity056Test,net.ankio.ledger.data.MerchantEnrichmentTest,net.ankio.ledger.data.LedgerUndo056Test,net.ankio.ledger.data.CaptureSupplementTest,net.ankio.ledger.PaymentRecognitionQueueTest,net.ankio.ledger.PaymentVisitsTest,net.ankio.ledger.BackgroundSettingsSyncTest,net.ankio.ledger.PermissionTrimTest,net.ankio.ledger.CaptureReadinessTest,net.ankio.ledger.CaptureRestoreTest,net.ankio.ledger.RecognitionBannerFallbackTest,net.ankio.ledger.SetupStepsTest,net.ankio.ledger.ocr.IconGeneralityTest,net.ankio.ledger.ocr.LocalHeaderIconTest,net.ankio.ledger.IconLocationRegressionTest,net.ankio.ledger.MerchantIconTest,net.ankio.ledger.ocr.LocalRecognitionClientTest,net.ankio.ledger.data.AccountPostingTest,net.ankio.ledger.data.ChannelDefaultAccountTest,net.ankio.ledger.data.MonthlyBudgetTest,net.ankio.ledger.data.ReimbursementTest,net.ankio.ledger.data.BillReportTest,net.ankio.ledger.data.ReportEvidenceTest,net.ankio.ledger.data.AccountNameTest,net.ankio.ledger.data.RefundBackupTest,net.ankio.ledger.AccountIdentityCurrencyUiTest,net.ankio.ledger.BillReportUiTest,net.ankio.ledger.data.OfflineBillsTest,net.ankio.ledger.data.LedgerBatchDeletionTest,net.ankio.ledger.data.InvalidRecognitionCleanupTest' :app:connectedDebugAndroidTest --stacktrace
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -159,6 +161,7 @@ jobs:
               'versionCode': item['versionCode'], 'abi': 'arm64-v8a'
           }, indent=2) + '\n')
           PY
+          python scripts/check-app-branding.py --apk ci-artifacts/*-unsigned.apk
       - name: Sign trusted main builds
         if: github.repository == 'MisterGaohohoho/huiming-ledger' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         env:

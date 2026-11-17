@@ -30,6 +30,7 @@ import kotlinx.coroutines.launch
 /** Exposed only to the packaged ledger page; native storage remains the source of truth. */
 class LedgerWebBridge(private val activity: MainActivity) {
     private val app get() = activity.ledger
+    private val batchDeletion by lazy { net.ankio.ledger.data.LedgerBatchDeletion(app.store) }
 
     @JavascriptInterface
     fun offlineSummary(json: String): String = offlineRead(json, true)
@@ -236,7 +237,7 @@ class LedgerWebBridge(private val activity: MainActivity) {
         JSONObject().put("ok", true).put("version", BuildConfig.VERSION_NAME)
             .put("ledgerView",view?.let { JSONObject().put("hasMore",it.getBoolean("hasMore")).put("summary",it.getJSONObject("summary"))
                 .put("nextCursor",it.opt("nextCursor")?:JSONObject.NULL) }?:JSONObject.NULL)
-            .put("pendingDeletion",app.store.pendingDeletion()?.let { JSONObject().put("id",it.id).put("expiresAt",it.expiresAt) }?:JSONObject.NULL)
+            .put("pendingDeletion",app.store.pendingDeletion()?.let(::deletionJson)?:JSONObject.NULL)
             .put("records", records).put("recognitionTasks",tasks).put("channels", channels)
             .put("accounts", accounts).put("customCategories", custom)
             .put("bankOptions",JSONArray().apply { AccountBanks.entries.forEach {
@@ -431,6 +432,30 @@ class LedgerWebBridge(private val activity: MainActivity) {
     } catch (error: Exception) {
         failure(error.message ?: "退款关联失败，请重新核对原账单").toString()
     }
+
+    @JavascriptInterface
+    fun previewBatchDelete(json:String):String=try { batchDeletion.preview(json).toString() }
+        catch(error:Exception) { failure(error.message?:"无法读取所选账单").toString() }
+
+    @JavascriptInterface
+    fun deleteBatch(token:String):String=try {
+        val deletion=batchDeletion.commit(token)
+        app.changed()
+        app.scope.launch {
+            kotlinx.coroutines.delay(net.ankio.ledger.data.LedgerStore.BATCH_UNDO_WINDOW_MS+150)
+            app.store.purgeExpiredDeletes().forEach(app.tasks::deleteForRecord);app.changed()
+        }
+        deletionJson(deletion).put("ok",true).toString()
+    }catch(error:Exception){failure(error.message?:"批量删除失败，请重试").toString()}
+
+    @JavascriptInterface
+    fun undoDeleteBatch(token:String):String=try {
+        checkInput(app.store.undoDeleteBatch(token),"撤销时间已过")
+        app.changed();JSONObject().put("ok",true).toString()
+    }catch(error:Exception){failure(error.message?:"整批撤销失败，请重试").toString()}
+
+    private fun deletionJson(d:net.ankio.ledger.data.DeletedRecord)=JSONObject()
+        .put("id",d.id).put("expiresAt",d.expiresAt).put("batchId",d.batchId?:JSONObject.NULL).put("count",d.count)
 
     @JavascriptInterface
     fun delete(id: Long): String = try {

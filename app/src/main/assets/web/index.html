@@ -20,6 +20,7 @@
   <link href="ui-scroll.css" rel="stylesheet"/>
   <link href="account-experience.css" rel="stylesheet"/>
   <link href="record-experience.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="ledger-selection.css">
  </head>
  <body class="native-app">
   <main class="workspace">
@@ -413,23 +414,11 @@
        </span>
       </label>
      </section>
-     <section class="entry-import">
-      <button aria-label="导入支付截图" onclick="newDraft();go('import');pickImage()" type="button">
-       <i aria-hidden="true" class="fa-solid fa-image">
-       </i>
-      </button>
-      <div>
-       <b>
-        AI 智能识别：导入账单截图
-       </b>
-       <small>
-        选择单笔账单，识别后核对入账
-       </small>
-      </div>
-      <span class="chevron">
-       ›
-      </span>
-     </section>
+     <button class="entry-import" aria-label="导入支付截图" onclick="newDraft();go('import');pickImage()" type="button">
+      <span class="entry-import-icon" aria-hidden="true"><i class="fa-solid fa-image"></i></span>
+      <span class="entry-import-copy"><b>AI 智能识别：导入账单截图</b><small>选择单笔账单，识别后核对入账</small></span>
+      <span class="chevron" aria-hidden="true">›</span>
+     </button>
      <div class="entry-categories category-grid" id="category-grid">
      </div>
      <div aria-label="金额数字键盘" class="entry-keyboard">
@@ -711,5 +700,6 @@
   <script src="permission.js"></script>
   <script src="vendor/echarts.min.js"></script>
   <script src="unified-ledger.js"></script>
+  <script src="ledger-selection.js"></script>
  </body>
 </html>

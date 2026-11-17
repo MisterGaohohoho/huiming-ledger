@@ -37,8 +37,8 @@ class ExecutionLogTest {
                     .processPrepared(byteArrayOf(1),Source.IMAGE,"synthetic failure",id) { true }
             }.exceptionOrNull()
             assertSame("Diagnostics must preserve the original recognition error",failure,actual)
-            assertEquals("FAILED",app.tasks.status(id))
-            assertEquals(failure.userMessage,app.tasks.message(id))
+            assertFalse(app.tasks.exists(id))
+            assertNull(app.tasks.image(id))
             val events=app.executionLog.snapshot().getJSONArray("events")
             assertTrue((0 until events.length()).any { index ->
                 val event=events.getJSONObject(index)

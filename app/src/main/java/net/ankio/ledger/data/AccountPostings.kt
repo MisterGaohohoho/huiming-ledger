@@ -100,6 +100,21 @@ internal object AccountPostings {
         db.update("records",ContentValues().apply { put("account_uid",uid);put("account_effect",effect) },"id=?",arrayOf(id.toString()))
     }
 
+    /** Net by account first, so an offsetting batch cannot overflow at an intermediate row. */
+    fun synchronizeBatch(db:SQLiteDatabase,ids:List<Long>) {
+        val deltas=mutableMapOf<String,Long>();val effects=mutableListOf<Pair<Long,Long>>()
+        for(id in ids)db.rawQuery("SELECT account_uid,account_effect,state,amount,direction,EXISTS(SELECT 1 FROM record_deletions d WHERE d.record_id=r.id) FROM records r WHERE id=?",arrayOf(id.toString())).use { c ->
+            check(c.moveToFirst()) { "账单已不存在" }
+            val uid=if(c.isNull(0))null else c.getString(0);val target=uid?.let { account(db,it) }
+            val next=if(target!=null && c.getString(2)=="POSTED" && !c.isNull(3) && !c.isNull(4) && c.getInt(5)==0)
+                effect(target.second,c.getLong(3),Direction.valueOf(c.getString(4))) else 0L
+            if(uid!=null)deltas[uid]=Math.addExact(deltas[uid]?:0L,next-c.getLong(1))
+            effects+=id to next
+        }
+        deltas.forEach { (uid,delta)->adjust(db,uid,delta) }
+        effects.forEach { (id,effect)->db.execSQL("UPDATE records SET account_effect=? WHERE id=?",arrayOf(effect,id)) }
+    }
+
     fun select(db:SQLiteDatabase,id:Long,uid:String?) {
         require(uid==null || account(db,uid)!=null) { "账户已不存在，请重新选择" }
         val unchanged=db.rawQuery("SELECT account_uid FROM records WHERE id=?",arrayOf(id.toString())).use {

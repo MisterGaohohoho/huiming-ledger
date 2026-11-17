@@ -37,9 +37,9 @@ sealed class IngestResult {
     data class Skipped(val message:String):IngestResult()
 }
 
-data class DeletedRecord(val id:Long,val expiresAt:Long)
+data class DeletedRecord(val id:Long,val expiresAt:Long,val batchId:String?=null,val count:Int=1)
 
-class LedgerStore(context: Context, private val name: String = "ledger.db", private val screenshots: ScreenshotStore = ScreenshotStore.get(context)) : SQLiteOpenHelper(context, name, null, 14) {
+class LedgerStore(context: Context, private val name: String = "ledger.db", private val screenshots: ScreenshotStore = ScreenshotStore.get(context)) : SQLiteOpenHelper(context, name, null, 15) {
     internal val reimbursementContext: Context = context.applicationContext
     internal val reimbursementDirectory = java.io.File(context.filesDir, "reimbursement-originals/" + UUID.nameUUIDFromBytes(name.toByteArray()).toString())
     private fun imageOwner(id: Long) = "ledger:$name:$id"
@@ -80,6 +80,7 @@ class LedgerStore(context: Context, private val name: String = "ledger.db", priv
         createMerchantIcons(db)
         createRefunds(db)
         createIdentitiesAndUndo(db)
+        createBatchDeletionSchema(db)
         ReimbursementStore.createSchema(db)
         AccountPostings.create(db)
         AccountTransfers.createSchema(db)
@@ -87,9 +88,16 @@ class LedgerStore(context: Context, private val name: String = "ledger.db", priv
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if(oldVersion<13)upgradeLegacy(db,oldVersion,13)
-        check(oldVersion in 1..13 && newVersion==14) { "Unsupported database migration $oldVersion → $newVersion" }
+        check(oldVersion in 1..14 && newVersion==15) { "Unsupported database migration $oldVersion → $newVersion" }
         AccountPostings.create(db)
         AccountTransfers.createSchema(db)
+        createBatchDeletionSchema(db)
+    }
+
+    private fun createBatchDeletionSchema(db:SQLiteDatabase) {
+        val columns=db.rawQuery("PRAGMA table_info(record_deletions)",null).use { c -> buildSet { while(c.moveToNext())add(c.getString(1)) } }
+        if("batch_id" !in columns)db.execSQL("ALTER TABLE record_deletions ADD COLUMN batch_id TEXT")
+        db.execSQL("CREATE INDEX IF NOT EXISTS deletions_batch ON record_deletions(batch_id)")
     }
 
     private fun upgradeLegacy(db:SQLiteDatabase,oldVersion:Int,newVersion:Int) {
@@ -1139,15 +1147,51 @@ class LedgerStore(context: Context, private val name: String = "ledger.db", priv
     @Synchronized fun undoDelete(id:Long,now:Long=System.currentTimeMillis()):Boolean {
         val db=writableDatabase;db.beginTransaction()
         try {
-        val restored=db.delete("record_deletions","record_id=? AND expires_at>?",arrayOf(id.toString(),now.toString()))==1
+        val restored=db.delete("record_deletions","record_id=? AND expires_at>? AND batch_id IS NULL",arrayOf(id.toString(),now.toString()))==1
         if(restored) { AccountPostings.synchronize(db,id);markDeletedMedia(id,"HISTORY") }
         db.setTransactionSuccessful();return restored
         } finally { db.endTransaction() }
     }
 
+    /** All tombstones and balance effects commit together; media stays available for undo. */
+    @Synchronized fun softDeleteBatch(ids:List<Long>,now:Long=System.currentTimeMillis()):DeletedRecord {
+        require(ids.isNotEmpty() && ids.distinct().size==ids.size)
+        val batch=UUID.randomUUID().toString();val db=writableDatabase
+        db.beginTransaction()
+        try {
+            for(id in ids) {
+                check(get(id)!=null) { "账单已变化，请重新选择" }
+                db.insertOrThrow("record_deletions",null,ContentValues().apply {
+                    put("record_id",id);put("expires_at",now+BATCH_UNDO_WINDOW_MS);put("batch_id",batch)
+                })
+            }
+            AccountPostings.synchronizeBatch(db,ids)
+            db.setTransactionSuccessful()
+        } finally { db.endTransaction() }
+        ids.forEach { markDeletedMedia(it,"UNDO") }
+        return DeletedRecord(ids.first(),now+BATCH_UNDO_WINDOW_MS,batch,ids.size)
+    }
+
+    @Synchronized fun undoDeleteBatch(batch:String,now:Long=System.currentTimeMillis()):Boolean {
+        require(batch.matches(Regex("[0-9a-f-]{36}")))
+        val db=writableDatabase;val ids=mutableListOf<Long>()
+        db.beginTransaction()
+        try {
+            db.rawQuery("SELECT record_id FROM record_deletions WHERE batch_id=? AND expires_at>?",arrayOf(batch,now.toString())).use { c ->
+                while(c.moveToNext())ids.add(c.getLong(0))
+            }
+            if(ids.isEmpty())return false
+            check(db.delete("record_deletions","batch_id=?",arrayOf(batch))==ids.size)
+            AccountPostings.synchronizeBatch(db,ids)
+            db.setTransactionSuccessful()
+        } finally { db.endTransaction() }
+        ids.forEach { markDeletedMedia(it,"HISTORY") }
+        return true
+    }
+
     fun pendingDeletion(now:Long=System.currentTimeMillis()):DeletedRecord? = readableDatabase.rawQuery(
-        "SELECT record_id,expires_at FROM record_deletions WHERE expires_at>? ORDER BY expires_at DESC,record_id DESC LIMIT 1",arrayOf(now.toString())
-    ).use { c-> if(c.moveToFirst())DeletedRecord(c.getLong(0),c.getLong(1)) else null }
+        "SELECT record_id,expires_at,batch_id,CASE WHEN batch_id IS NULL THEN 1 ELSE (SELECT COUNT(*) FROM record_deletions b WHERE b.batch_id=d.batch_id) END FROM record_deletions d WHERE expires_at>? ORDER BY expires_at DESC,record_id DESC LIMIT 1",arrayOf(now.toString())
+    ).use { c-> if(c.moveToFirst())DeletedRecord(c.getLong(0),c.getLong(1),if(c.isNull(2))null else c.getString(2),c.getInt(3)) else null }
 
     @Synchronized fun purgeExpiredDeletes(now:Long=System.currentTimeMillis()):List<Long> {
         val ids=readableDatabase.rawQuery("SELECT record_id FROM record_deletions WHERE expires_at<=?",arrayOf(now.toString()))
@@ -1156,7 +1200,7 @@ class LedgerStore(context: Context, private val name: String = "ledger.db", priv
         return ids
     }
 
-    companion object { const val UNDO_WINDOW_MS=6_000L }
+    companion object { const val UNDO_WINDOW_MS=6_000L;const val BATCH_UNDO_WINDOW_MS=10_000L }
 
     fun accounts(): List<LedgerAccount> = readableDatabase.query("accounts", null, null, null,
         null, null, "id ASC").use { cursor -> buildList { while (cursor.moveToNext()) add(readAccount(cursor)) } }
