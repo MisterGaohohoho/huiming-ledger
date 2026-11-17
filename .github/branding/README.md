@@ -4,7 +4,7 @@
 
 - `youshu-icon.png`：用于仓库展示的完整应用图标。
 - Android 前景：`app/src/main/res/drawable-nodpi/youshu_icon.png`。
-- Android 背景：`youshu_teal`，深绿 `#176B5B`。
+- Android 背景：`youshu_brand`，深绿 `#176B5B`。
 - `youshu_monochrome.png`：系统主题单色图标。
 - `youshu_notification_foreground.png` / `youshu_notification_small.png`：通知中表示应用身份的图形。
 
