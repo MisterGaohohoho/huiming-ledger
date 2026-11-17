@@ -57,7 +57,7 @@ internal class RecognitionLiveUpdate(private val context:Context) {
             flags=Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         val builder=Notification.Builder(context,channel.id)
-            .setSmallIcon(R.drawable.huayoupu_notification_small).setColor(context.getColor(R.color.huayoupu_coral))
+            .setSmallIcon(R.drawable.youshu_notification_small).setColor(context.getColor(R.color.youshu_brand))
             .setContentTitle(title).setContentText(subtitle)
             .setContentIntent(PendingIntent.getActivity(context,ID,intent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
             .setOngoing(true).setOnlyAlertOnce(loading || compactResult).setShowWhen(false)

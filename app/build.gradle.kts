@@ -58,8 +58,8 @@ android {
         applicationId = "net.ankio.ledger"
         minSdk = 30
         targetSdk = 36
-        versionCode = 121
-        versionName = "0.5.115-offline.1"
+        versionCode = 122
+        versionName = "0.5.116-youshu.1"
         buildConfigField("String", "LOCAL_OCR_ENGINE", "\"paddle-v6-tiny\"")
         buildConfigField("String", "LOCAL_OCR_LABEL", "\"PaddleOCR V6 Tiny\"")
         testInstrumentationRunner = providers.gradleProperty("ledgerTestRunner").getOrElse("androidx.test.runner.AndroidJUnitRunner")

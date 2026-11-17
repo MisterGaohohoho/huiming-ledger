@@ -78,7 +78,7 @@ class NativeReimbursementIslandTest {
             var current=published(manager,4700,"正在识别账单")
             assertTrue(current.actions.isNullOrEmpty())
             assertTrue(current.extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE))
-            assertEquals(R.drawable.huayoupu_notification_small,current.smallIcon.resId)
+            assertEquals(R.drawable.youshu_notification_small,current.smallIcon.resId)
             assertEquals(120_000L,current.timeoutAfter)
             instrument.runOnMainSync {assertTrue(live.postFeedback("未识别到金额，请重试",false))}
             current=published(manager,4701,"未识别到金额，请重试")
@@ -100,7 +100,7 @@ class NativeReimbursementIslandTest {
         assertFalse(compact.getBoolean("islandFirstFloat"));assertFalse(compact.getBoolean("enableFloat"));assertFalse(compact.has("actions"))
         assertEquals(0,compact.getJSONObject("iconTextInfo").getJSONObject("animIconInfo").getInt("type"))
         val picture=loading.getBundle("miui.focus.pics")!!.getParcelable<Icon>("miui.focus.pic_ledger")!!
-        assertEquals(Icon.TYPE_RESOURCE,picture.type);assertEquals(R.drawable.huayoupu_notification_icon,picture.resId)
+        assertEquals(Icon.TYPE_RESOURCE,picture.type);assertEquals(R.drawable.youshu_notification_icon,picture.resId)
         assertEquals(1,compact.getJSONObject("param_island").getJSONObject("smallIslandArea").getJSONObject("picInfo").getInt("type"))
         assertEquals(1,compact.getJSONObject("param_island").getJSONObject("bigIslandArea").getJSONObject("imageTextInfoLeft").getJSONObject("picInfo").getInt("type"))
         assertEquals("识别中",compact.getJSONObject("param_island").getJSONObject("bigIslandArea").getJSONObject("textInfo").getString("title"))
@@ -120,11 +120,11 @@ class NativeReimbursementIslandTest {
         val legacyAfter=context.getSystemService(NotificationManager::class.java).getNotificationChannel(failure.id)
         assertEquals("Do not rewrite the user's legacy channel preferences",legacyBefore,legacyAfter)
         assertNull(progress.sound);assertFalse(progress.shouldVibrate())
-        val drawable=context.getDrawable(R.drawable.huayoupu_notification_icon)!!
+        val drawable=context.getDrawable(R.drawable.youshu_notification_icon)!!
         val bitmap=android.graphics.Bitmap.createBitmap(128,128,android.graphics.Bitmap.Config.ARGB_8888)
         drawable.setBounds(0,0,128,128);drawable.draw(android.graphics.Canvas(bitmap))
-        assertEquals(context.getColor(R.color.huayoupu_coral),bitmap.getPixel(0,0))
-        assertEquals(context.getColor(R.color.huayoupu_coral),bitmap.getPixel(127,127))
+        assertEquals(context.getColor(R.color.youshu_brand),bitmap.getPixel(0,0))
+        assertEquals(context.getColor(R.color.youshu_brand),bitmap.getPixel(127,127))
         bitmap.recycle()
     }
 }

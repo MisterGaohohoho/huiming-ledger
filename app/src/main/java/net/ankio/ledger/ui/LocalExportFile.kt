@@ -14,7 +14,7 @@ internal object LocalExportFile {
         val uri=resolver.insert(collection,ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME,name)
             put(MediaStore.MediaColumns.MIME_TYPE,mime)
-            put(MediaStore.MediaColumns.RELATIVE_PATH,(if(picture)Environment.DIRECTORY_PICTURES else Environment.DIRECTORY_DOWNLOADS)+"/花有谱")
+            put(MediaStore.MediaColumns.RELATIVE_PATH,(if(picture)Environment.DIRECTORY_PICTURES else Environment.DIRECTORY_DOWNLOADS)+"/有数")
             put(MediaStore.MediaColumns.IS_PENDING,1)
         })?:error("无法创建导出文件")
         var published=false

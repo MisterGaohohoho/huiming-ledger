@@ -39,7 +39,7 @@ class ReportPaper(private val report:BillReport,private val attachmentIds:Map<St
             }
         }
         fun rule() { lines+=Line("",style=4) }
-        add("花有谱 · 账单汇总",style=1)
+        add("有数 · 账单汇总",style=1)
         add("${report.criteria.from} 至 ${report.criteria.through}",style=3)
         add("共 ${report.rows.size} 笔 · 人民币",style=3)
         val criteria=report.criteria
@@ -128,7 +128,7 @@ class ReportPaper(private val report:BillReport,private val attachmentIds:Map<St
                 paper(page.canvas,0,1529,1529,false)
                 drawLines(page.canvas,pageLines,if(index==0)90f else 130f)
                 if(index>0) { paint.color=Color.rgb(77,99,91);paint.textSize=28f;paint.typeface=Typeface.DEFAULT
-                    paint.textAlign=Paint.Align.CENTER;page.canvas.drawText("花有谱 · 账单汇总 · ${report.criteria.from} 至 ${report.criteria.through}",540f,66f,paint) }
+                    paint.textAlign=Paint.Align.CENTER;page.canvas.drawText("有数 · 账单汇总 · ${report.criteria.from} 至 ${report.criteria.through}",540f,66f,paint) }
                 paint.color=Color.rgb(77,99,91);paint.textSize=26f;paint.typeface=Typeface.DEFAULT
                 paint.textAlign=Paint.Align.CENTER;page.canvas.drawText("${index+1} / ${pages.size}",540f,1480f,paint)
                 page.canvas.restore();pdf.finishPage(page)

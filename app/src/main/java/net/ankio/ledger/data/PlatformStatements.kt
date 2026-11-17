@@ -32,6 +32,10 @@ object PlatformStatements {
 
     fun read(input: InputStream, platform: String): Document {
         require(platform in setOf("wechat","alipay")){"支付平台无效"}
+        return fromRows(readRows(input),platform)
+    }
+
+    internal fun readRows(input:InputStream):List<List<String>> {
         val bytes=readLimited(input,8*1024*1024)
         val rows=if(bytes.size>2 && bytes[0]==80.toByte() && bytes[1]==75.toByte()) xlsx(bytes) else {
             require(!(bytes.size>1 && bytes[0]==0xD0.toByte() && bytes[1]==0xCF.toByte())){"请将旧版 XLS 转为 XLSX 或 CSV 后导入"}
@@ -39,7 +43,7 @@ object PlatformStatements {
             catch(_:java.nio.charset.CharacterCodingException){java.nio.charset.Charset.forName("GB18030").newDecoder().onMalformedInput(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString()}
             LedgerCsvImport.parse(text.removePrefix("\uFEFF"))
         }
-        return fromRows(rows,platform)
+        return rows
     }
 
     internal fun fromRows(rows: List<List<String>>, platform: String): Document {

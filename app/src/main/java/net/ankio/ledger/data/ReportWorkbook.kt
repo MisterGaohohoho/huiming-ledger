@@ -11,7 +11,7 @@ object ReportWorkbook {
         val c=report.criteria
         val summary=mutableListOf<List<CenteredWorkbook.Cell>>()
         fun row(vararg values:Any?){summary+=values.map(CenteredWorkbook::text)}
-        row("花有谱 · 账单汇总")
+        row("有数 · 账单汇总")
         row("时间范围","${c.from} 至 ${c.through}")
         row("标签条件",c.tags.joinToString("、").ifEmpty {"全部标签"},if(c.matchAll)"全部满足"else"包含任一")
         row("收支方向",when(c.direction){"EXPENSE"->"支出";"INCOME"->"收入";else->"全部收支"})

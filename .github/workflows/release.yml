@@ -90,9 +90,9 @@ jobs:
         run: |
           set -euo pipefail
           cat > "$RUNNER_TEMP/release-notes.md" <<EOF
-          花有谱 ${RELEASE_TAG#v}
+          有数 ${RELEASE_TAG#v}
 
-          下载下方 **Huayoupu-Ledger-*-arm64-v8a.apk**，在 Android 11 或更高版本的 ARM64 手机上安装。
+          下载下方 **Youshu-Ledger-*-arm64-v8a.apk**，在 Android 11 或更高版本的 ARM64 手机上安装。
 
           - APK 由本 Fork 的 GitHub Actions 构建，并使用本 Fork 的独立固定签名。
           - 对应提交：$RELEASE_COMMIT；源码、浏览器、单元测试、lint 和 Android 模拟器回归均已通过。
@@ -102,4 +102,4 @@ jobs:
           cat .github/RELEASE_NOTES.md >> "$RUNNER_TEMP/release-notes.md"
           flags=(--latest)
           if [[ "$IS_PRERELEASE" == 'true' ]]; then flags=(--prerelease --latest=false); fi
-          gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --verify-tag "${flags[@]}" --title "花有谱 ${RELEASE_TAG#v} · MisterGaohohoho" --notes-file "$RUNNER_TEMP/release-notes.md" release/*.apk release/*.sha256 release/Huayoupu-Ledger-source.zip release/build-info.json
+          gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --verify-tag "${flags[@]}" --title "有数 ${RELEASE_TAG#v} · MisterGaohohoho" --notes-file "$RUNNER_TEMP/release-notes.md" release/*.apk release/*.sha256 release/Youshu-Ledger-source.zip release/build-info.json

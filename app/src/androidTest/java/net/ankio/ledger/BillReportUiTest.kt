@@ -131,15 +131,15 @@ class BillReportUiTest {
             for(format in listOf("png","pdf","xlsx")) {
                 val collection=if(format=="png")MediaStore.Images.Media.EXTERNAL_CONTENT_URI else MediaStore.Downloads.EXTERNAL_CONTENT_URI
                 val extension=if(format=="pdf")"zip"else format
-                val prefix="花有谱-账单汇总-%-${token.take(8)}.$extension"
+                val prefix="有数-账单汇总-%-${token.take(8)}.$extension"
                 ui.run("document.querySelector('[data-report-export=\"$format\"]').click()")
-                val path=if(format=="png")"相册/花有谱" else "下载/花有谱"
+                val path=if(format=="png")"相册/有数" else "下载/有数"
                 ui.await("document.querySelector('#report-save-status').textContent==='${if(format=="pdf")"PDF 与图片材料包 ZIP"else format.uppercase()} 已保存到$path'")
                 assertEquals("true",ui.value("!!document.querySelector('#report-receipt') && document.querySelector('#sheet').open"))
                 val saved=app.contentResolver.query(collection,arrayOf(MediaStore.MediaColumns._ID,MediaStore.MediaColumns.RELATIVE_PATH,MediaStore.MediaColumns.IS_PENDING),
                     "${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ?",arrayOf(prefix),"${MediaStore.MediaColumns._ID} DESC")!!.use { cursor ->
                     assertTrue("export file not found",cursor.moveToFirst());assertEquals(0,cursor.getInt(2))
-                    assertEquals(if(format=="png")"Pictures/花有谱/" else "Download/花有谱/",cursor.getString(1))
+                    assertEquals(if(format=="png")"Pictures/有数/" else "Download/有数/",cursor.getString(1))
                     android.content.ContentUris.withAppendedId(collection,cursor.getLong(0))
                 }
                 try {

@@ -132,4 +132,45 @@ class OfflineBillsTest {
         try{PlatformStatements.read(ByteArrayInputStream(workbook(true)),"wechat");fail("Formula accepted")}
         catch(_:IllegalStateException){}
     }
+
+    @Test fun unifiedImportDetectsJiezhangAndKeepsAccountsCategoriesAndDuplicates() {
+        val header=listOf("子分类","父分类","类型","资产","备注","金额","创建时间","更新时间")
+        val row=listOf("午餐","餐饮","支出","微信钱包","合成测试","16.0","2026-03-07 11:13:00","2026-03-07 11:13:11")
+        val csv=(header.joinToString(",")+"\n"+row.joinToString(",")+"\n").toByteArray()
+        val doc=UnifiedBillImport.read(csv.inputStream()) as UnifiedBillImport.Jiezhang
+        assertTrue(doc.errors.isEmpty());assertEquals("餐饮/午餐",doc.rows.single().record.bill.category)
+        assertEquals(1,UnifiedBillImport.apply(store,doc,mapOf("微信钱包" to "@new")).first)
+        assertEquals(-1600L,store.accounts().single().amountCents)
+        assertEquals(1,UnifiedBillImport.preview(store,doc).duplicates)
+        assertEquals(0,UnifiedBillImport.apply(store,doc,mapOf("微信钱包" to "@new")).first)
+        assertEquals(-1600L,store.accounts().single().amountCents)
+        val listed=LedgerReadView(store).records("all",channel="wechat").getJSONArray("records").getJSONObject(0)
+        assertEquals("洁账导入",listed.getString("importLabel"));assertEquals("wechat",listed.getString("paymentProvider"))
+        assertEquals(1600L,OfflineAnalytics(store).summary(query("wechat","all","all")).getJSONObject("totals").getLong("expense"))
+        val changed=UnifiedBillImport.jiezhang(listOf(header,row.toMutableList().apply{this[4]="修改过备注"}))
+        assertEquals(1,UnifiedBillImport.preview(store,changed).possible.size)
+        assertEquals(1,UnifiedBillImport.apply(store,changed,mapOf("微信钱包" to store.accounts().single().uid)).second)
+        assertEquals(-1600L,store.accounts().single().amountCents)
+        assertEquals(1,UnifiedBillImport.jiezhang(listOf(header,row.toMutableList().apply{this[5]="1.001"})).errors.size)
+    }
+
+    @Test fun yearAllAndCustomScopesAgreeAcrossLedgerReportsAndPagination() {
+        val times=listOf("2025-12-31T23:59:59","2026-01-01T00:00:00","2026-01-31T23:59:59","2026-02-01T00:00:00")
+        store.merge(times.mapIndexed { i,at->LedgerRecord(capture=Capture(Source.MANUAL,PaymentApps.WECHAT,""),
+            bill=ParsedBill(100L*(i+1),Direction.EXPENSE,"合成商户 $i","餐饮",time(at),null,true,"",true),state=RecordState.POSTED) })
+        val ledger=LedgerReadView(store);val analytics=OfflineAnalytics(store)
+        for((period,mode,expected) in listOf(Triple("2026","year",900L),Triple("all","all",1000L),Triple("2026-01-01..2026-01-31","custom",500L))){
+            assertEquals(expected,ledger.summary(period).getJSONObject("totals").getLong("expense"))
+            val report=analytics.summary(query("wechat",mode,period))
+            assertEquals(expected,report.getJSONObject("totals").getLong("expense"))
+            val trend=report.getJSONArray("trend")
+            assertEquals(expected,(0 until trend.length()).sumOf{trend.getJSONObject(it).getLong("expense")})
+            if(mode!="year")assertFalse(report.getBoolean("comparable"))
+        }
+        val page=ledger.records("all",limit=2,channel="wechat");val cursor=page.getJSONObject("nextCursor")
+        val second=ledger.records("all",limit=2,channel="wechat",beforeAt=cursor.getLong("occurredAt"),beforeId=cursor.getLong("id"))
+        assertEquals(2,second.getJSONArray("records").length());assertFalse(second.getBoolean("hasMore"))
+        assertEquals(0,ledger.records("all",channel="alipay").getJSONArray("records").length())
+        try{LedgerPeriod.parse("2026-03-01..2026-02-01");fail("Reversed dates accepted")}catch(_:IllegalArgumentException){}
+    }
 }
