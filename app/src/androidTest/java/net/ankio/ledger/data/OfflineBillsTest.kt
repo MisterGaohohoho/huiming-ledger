@@ -152,10 +152,16 @@ class OfflineBillsTest {
         assertEquals(1,UnifiedBillImport.apply(store,changed,mapOf("微信钱包" to store.accounts().single().uid)).second)
         assertEquals(-1600L,store.accounts().single().amountCents)
         assertEquals(1,UnifiedBillImport.jiezhang(listOf(header,row.toMutableList().apply{this[5]="1.001"})).errors.size)
-        store.delete(store.all().first{it.state==RecordState.POSTED}.id)
+        val deleted=store.all().first{it.state==RecordState.POSTED}.id
+        val deletedAt=System.currentTimeMillis()
+        assertTrue(store.softDelete(deleted,deletedAt))
         assertEquals(1,UnifiedBillImport.preview(store,doc).duplicates)
         assertEquals(0,UnifiedBillImport.apply(store,doc,emptyMap()).first)
         assertEquals(0L,store.accounts().single().amountCents)
+        store.purgeExpiredDeletes(deletedAt+LedgerStore.UNDO_WINDOW_MS+1)
+        assertEquals(0,UnifiedBillImport.preview(store,doc).duplicates)
+        assertEquals(1,UnifiedBillImport.apply(store,doc,mapOf("微信钱包" to store.accounts().single().uid)).first)
+        assertEquals(-1600L,store.accounts().single().amountCents)
     }
 
     @Test fun jiezhangXlsxDetectsNumericAmountsAndTextDatesWithBlankNotes() {
