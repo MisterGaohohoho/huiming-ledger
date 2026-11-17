@@ -1,7 +1,7 @@
 /* Selection is transient; confirmed deletion and its undo deadline are native durable data. */
 (()=>{
  'use strict';
- let selecting=false,all=false,ids=new Set(),excluded=new Set(),scope='',summary=null,summaryKey='',press=null,suppressUntil=0;
+ let selecting=false,all=false,ids=new Set(),excluded=new Set(),scope='',summary=null,summaryKey='',press=null,suppressUntil=0,longPressed=false;
  const entries=$('entries'),ledger=$('ledger'),header=ledger.querySelector('.v21-header');
  header.insertAdjacentHTML('beforeend','<div id="selection-heading" hidden role="status" aria-live="polite"><h1 id="selection-count"></h1><p>轻点账单勾选，长按进入多选</p></div>');
  ledger.insertAdjacentHTML('beforeend','<div id="selection-bar" hidden role="toolbar" aria-label="批量管理账单"><button type="button" id="selection-cancel">取消</button><button type="button" id="selection-all">全选</button><button type="button" class="danger" id="selection-delete">删除</button></div>');
@@ -43,11 +43,12 @@
   const row=rowOf(event.target);if(!row)return;
   if(selecting){event.stopPropagation();return}
   stopPress();press={x:event.clientX,y:event.clientY,id:event.pointerId,timer:setTimeout(()=>{
-   suppressUntil=Date.now()+1000;begin(idOf(row));stopPress();
+   longPressed=true;suppressUntil=Date.now()+1000;begin(idOf(row));stopPress();
   },500)};
  },true);
  entries.addEventListener('pointermove',event=>{if(press&&Math.hypot(event.clientX-press.x,event.clientY-press.y)>10)stopPress()},true);
- document.addEventListener('pointerup',stopPress,true);document.addEventListener('pointercancel',stopPress,true);window.addEventListener('blur',stopPress);
+ const release=()=>{if(longPressed){suppressUntil=Date.now()+400;longPressed=false}stopPress()};
+ document.addEventListener('pointerup',release,true);document.addEventListener('pointercancel',release,true);window.addEventListener('blur',release);
  entries.addEventListener('contextmenu',event=>{const row=rowOf(event.target);if(!row)return;event.preventDefault();if(!selecting)begin(idOf(row))});
  entries.addEventListener('keydown',event=>{const row=rowOf(event.target);if(row&&event.shiftKey&&event.key==='F10'){event.preventDefault();begin(idOf(row))}});
  entries.addEventListener('click',event=>{

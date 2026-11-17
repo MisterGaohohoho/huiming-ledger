@@ -1157,6 +1157,8 @@ class LedgerStore(context: Context, private val name: String = "ledger.db", priv
     @Synchronized fun softDeleteBatch(ids:List<Long>,now:Long=System.currentTimeMillis()):DeletedRecord {
         require(ids.isNotEmpty() && ids.distinct().size==ids.size)
         val batch=UUID.randomUUID().toString();val db=writableDatabase
+        val media=mutableListOf<Long>()
+        return synchronized(screenshots) {
         db.beginTransaction()
         try {
             for(id in ids) {
@@ -1166,15 +1168,20 @@ class LedgerStore(context: Context, private val name: String = "ledger.db", priv
                 })
             }
             AccountPostings.synchronizeBatch(db,ids)
+            ids.forEach { media.add(it);markDeletedMedia(it,"UNDO") }
             db.setTransactionSuccessful()
+        } catch(error:Throwable) {
+            media.forEach { runCatching { markDeletedMedia(it,"HISTORY") } }
+            throw error
         } finally { db.endTransaction() }
-        ids.forEach { markDeletedMedia(it,"UNDO") }
-        return DeletedRecord(ids.first(),now+BATCH_UNDO_WINDOW_MS,batch,ids.size)
+        DeletedRecord(ids.first(),now+BATCH_UNDO_WINDOW_MS,batch,ids.size)
+        }
     }
 
     @Synchronized fun undoDeleteBatch(batch:String,now:Long=System.currentTimeMillis()):Boolean {
         require(batch.matches(Regex("[0-9a-f-]{36}")))
         val db=writableDatabase;val ids=mutableListOf<Long>()
+        return synchronized(screenshots) {
         db.beginTransaction()
         try {
             db.rawQuery("SELECT record_id FROM record_deletions WHERE batch_id=? AND expires_at>?",arrayOf(batch,now.toString())).use { c ->
@@ -1183,15 +1190,23 @@ class LedgerStore(context: Context, private val name: String = "ledger.db", priv
             if(ids.isEmpty())return false
             check(db.delete("record_deletions","batch_id=?",arrayOf(batch))==ids.size)
             AccountPostings.synchronizeBatch(db,ids)
+            ids.forEach { markDeletedMedia(it,"HISTORY") }
             db.setTransactionSuccessful()
+        } catch(error:Throwable) {
+            ids.forEach { runCatching { markDeletedMedia(it,"UNDO") } }
+            throw error
         } finally { db.endTransaction() }
-        ids.forEach { markDeletedMedia(it,"HISTORY") }
-        return true
+        true
+        }
     }
 
-    fun pendingDeletion(now:Long=System.currentTimeMillis()):DeletedRecord? = readableDatabase.rawQuery(
-        "SELECT record_id,expires_at,batch_id,CASE WHEN batch_id IS NULL THEN 1 ELSE (SELECT COUNT(*) FROM record_deletions b WHERE b.batch_id=d.batch_id) END FROM record_deletions d WHERE expires_at>? ORDER BY expires_at DESC,record_id DESC LIMIT 1",arrayOf(now.toString())
-    ).use { c-> if(c.moveToFirst())DeletedRecord(c.getLong(0),c.getLong(1),if(c.isNull(2))null else c.getString(2),c.getInt(3)) else null }
+    @Synchronized fun pendingDeletion(now:Long=System.currentTimeMillis()):DeletedRecord? {
+        val latest=readableDatabase.rawQuery("SELECT record_id,expires_at,batch_id FROM record_deletions WHERE expires_at>? ORDER BY expires_at DESC,record_id DESC LIMIT 1",arrayOf(now.toString()))
+            .use { c->if(c.moveToFirst())DeletedRecord(c.getLong(0),c.getLong(1),if(c.isNull(2))null else c.getString(2)) else null }?:return null
+        if(latest.batchId==null)return latest
+        val count=readableDatabase.rawQuery("SELECT COUNT(*) FROM record_deletions WHERE batch_id=?",arrayOf(latest.batchId)).use { it.moveToFirst();it.getInt(0) }
+        return latest.copy(count=count)
+    }
 
     @Synchronized fun purgeExpiredDeletes(now:Long=System.currentTimeMillis()):List<Long> {
         val ids=readableDatabase.rawQuery("SELECT record_id FROM record_deletions WHERE expires_at<=?",arrayOf(now.toString()))

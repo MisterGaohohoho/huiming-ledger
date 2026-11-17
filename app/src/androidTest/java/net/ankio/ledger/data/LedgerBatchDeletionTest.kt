@@ -57,6 +57,16 @@ class LedgerBatchDeletionTest {
         rejected { manager.commit(next.getString("token"),now) };assertEquals(2,store.all().size)
     }
 
+    @Test fun offsettingIncomeAndExpenseAtTheBalanceLimitCanBeDeletedAndRestored(){
+        val account=store.saveAccount(LedgerAccount(name="合成边界账户",amountCents=Money.MAX_CENTS))
+        val expense=record(1);val income=record(2,direction=Direction.INCOME)
+        assertEquals(Money.MAX_CENTS,store.getAccount(account.id)!!.amountCents)
+        val deletion=store.softDeleteBatch(listOf(expense.id,income.id),now)
+        assertEquals(Money.MAX_CENTS,store.getAccount(account.id)!!.amountCents)
+        assertTrue(store.undoDeleteBatch(deletion.batchId!!,now+1))
+        assertEquals(Money.MAX_CENTS,store.getAccount(account.id)!!.amountCents)
+    }
+
     @Test fun databaseFailureRollsBackTheEntireBatchAndUndo(){
         val account=store.saveAccount(LedgerAccount(name="合成账户",amountCents=1000))
         val rows=listOf(record(1),record(2));val db=store.writableDatabase

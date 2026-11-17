@@ -43,8 +43,10 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   const buttons=await page.locator('#selection-bar button').evaluateAll(list=>list.map(e=>({x:e.getBoundingClientRect().left,right:e.getBoundingClientRect().right,width:e.getBoundingClientRect().width})));
   assert(buttons.every(b=>b.x>=0&&b.right<=width&&b.width>50));
+  if(process.env.UI_SCREENSHOTS){await page.screenshot({path:path.join(process.env.UI_SCREENSHOTS,`selection-${width}.png`)});}
   await page.evaluate(()=>LedgerUI.back());assert.equal(await page.locator('#selection-bar').isVisible(),false);
   await page.evaluate(()=>beginManual());const card=page.locator('.entry-import');await card.scrollIntoViewIfNeeded();
+  if(process.env.UI_SCREENSHOTS){await page.screenshot({path:path.join(process.env.UI_SCREENSHOTS,`import-${width}.png`)});}
   // All parts share one button, one picker call per activation, including the blank area.
   for(const target of ['.entry-import-icon','.entry-import-copy b','.entry-import .chevron']){
    const before=await page.evaluate(()=>pickCount);await page.locator(target).click();

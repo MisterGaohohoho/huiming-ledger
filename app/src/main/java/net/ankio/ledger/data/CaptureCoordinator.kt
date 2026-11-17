@@ -11,7 +11,8 @@ class CaptureCoordinator(context: Context) {
     private val mutex = Mutex()
 
     suspend fun acceptRecognition(capture: Capture, bill: ParsedBill?, screenshot: ByteArray? = null, merchantIcon: ByteArray? = null, eventKey:String?=null, allowed: () -> Boolean): IngestResult = mutex.withLock {
-        if (!allowed() || bill == null || bill.amountCents == null || bill.amountCents !in 1..Money.MAX_CENTS || bill.direction == null)
+        val amount=bill?.amountCents
+        if (!allowed() || bill == null || amount == null || amount !in 1..Money.MAX_CENTS)
             return@withLock IngestResult.Ignored
         synchronized(app.channels) {
             if (!allowed()) IngestResult.Ignored
