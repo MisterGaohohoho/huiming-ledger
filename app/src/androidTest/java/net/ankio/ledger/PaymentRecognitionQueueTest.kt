@@ -186,7 +186,7 @@ class PaymentRecognitionQueueTest {
         assertTrue(queue.enqueue(id,WECHAT,true,fake.factory))
         recovery.completeExceptionally(java.io.IOException("synthetic recovery failure"))
         await { queue.size()==0 }
-        assertEquals(0,fake.calls.get());assertEquals("FAILED",app.tasks.status(id))
+        assertEquals(0,fake.calls.get());assertFalse(app.tasks.exists(id))
         queue.resume(fake.factory);assertEquals(0,queue.size())
     }
 
@@ -218,6 +218,21 @@ class PaymentRecognitionQueueTest {
         await { queue.size()==0 }
         assertEquals("New window task=${task(next)}",1,fake.calls.get());assertEquals("SUCCEEDED",app.tasks.status(next))
         assertEquals(2,ownRecords().size)
+    }
+
+    @Test fun automaticAndShakeNonBillsStillShowFailureAfterDiscardingTask()=runBlocking {
+        for(automatic in listOf(true,false)) {
+            val id=newTask(automatic);val feedback=mutableListOf<String>()
+            val before=ownRecords().map { it.id }
+            val factory={CaptureProcessor(app,OcrClient(app,SyntheticRecognitionBackend { _,_,_,_ ->
+                JSONObject().put("choices",org.json.JSONArray().put(JSONObject().put("message",JSONObject().put("content","{\"is_bill\":false,\"raw_text\":\"合成非账单\"}"))))
+            }))}
+            assertTrue(queue.enqueue(id,WECHAT,automatic,factory) { message,loading -> if(!loading)feedback.add(message) })
+            await { queue.size()==0 }
+            assertFalse(app.tasks.exists(id));assertNull(app.tasks.image(id))
+            assertEquals(before,ownRecords().map { it.id })
+            assertEquals(listOf("未识别到金额，请重试"),feedback)
+        }
     }
 
     private fun newTask(automatic:Boolean=true):Long {

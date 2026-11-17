@@ -52,13 +52,12 @@ class LegacyPageHistoryTest {
             assertTrue(failure is CancellationException);assertEquals("CANCELLED",app.tasks.status(task));assertEquals(before,app.store.all().map { it.uid }.toSet())
         } finally { image.recycle();app.tasks.delete(task);app.recognitionSession.invalidate();app.changed() }
     }
-    @Test fun failedAutomaticTaskKeepsItsSourceWhenOpenedInEditor() {
+    @Test fun failedAutomaticTaskIsRemovedFromHome() {
         val task=app.tasks.create(Source.OCR,"page_auto");app.tasks.update(task,"FAILED","合成识别失败")
         try { ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             val web=WebUiProbe(scenario);web.ready()
-            web.await("document.querySelector('[data-task=\"$task\"]')?.textContent.includes('交易自动 · AI识别')")
-            web.run("document.querySelector('[data-task=\"$task\"]').click()")
-            web.await("document.querySelector('#record-panel').open && document.querySelector('#source-label').textContent==='交易自动识别'")
+            assertFalse(app.tasks.exists(task))
+            assertEquals("false",web.value("!!document.querySelector('[data-task=\"$task\"]')"))
         } } finally { app.tasks.delete(task);app.changed() }
     }
 }

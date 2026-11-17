@@ -217,7 +217,7 @@ class AccountsReferenceDataTest {
             } finally { db.endTransaction() }
         }
         LedgerStore(context,name).use { upgraded ->
-            assertEquals(14,upgraded.readableDatabase.version);assertEquals(records,upgraded.all());assertEquals(accounts,upgraded.accounts())
+            assertEquals(15,upgraded.readableDatabase.version);assertEquals(records,upgraded.all());assertEquals(accounts,upgraded.accounts())
             assertEquals(history,upgraded.captureHistory(linked.id));assertNull(upgraded.get(historical.id)!!.accountUid)
             assertEquals(mapOf("wechat" to a.uid),upgraded.channelDefaultAccounts());assertTrue(AccountTransfers(upgraded).list().isEmpty())
             assertTrue(upgraded.accounts().all { it.includedInAssets })

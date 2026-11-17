@@ -61,7 +61,7 @@ class LedgerInteractionTest {
                 web.await("!document.querySelector('[data-record=\"${record.id}\"]')")
                 assertEquals("false",web.value("document.querySelector('#sheet').open"))
                 assertNull(app.store.get(record.id))
-                web.run("swipeTest('[data-task=\"$task\"]');document.querySelector('[data-task=\"$task\"]').closest('.swipe-row').querySelector('.swipe-delete').click()")
+                // Failed tasks are already absent; only financial records support swipe deletion.
                 web.await("!document.querySelector('[data-task=\"$task\"]')")
                 assertEquals("false",web.value("document.querySelector('#sheet').open"))
                 assertFalse(app.tasks.exists(task))

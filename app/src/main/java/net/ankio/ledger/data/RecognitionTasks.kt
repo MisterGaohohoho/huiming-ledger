@@ -27,6 +27,12 @@ class RecognitionTasks(context:Context,private val name:String="recognition.db",
             }
         }
         LegacyScreenshots.compact(db,migratedBytes)
+        // Previous versions kept failed attempts on the home page. Remove only unlinked
+        // failures; a valid REVIEW/SUCCEEDED bill and its shared evidence are preserved.
+        db.rawQuery("SELECT id FROM tasks WHERE record_id IS NULL AND status IN ('FAILED','NO_BILL')",null).use { c ->
+            val ids=buildList { while(c.moveToNext())add(c.getLong(0)) }
+            for(id in ids) { screenshots.release(imageOwner(id));db.delete("tasks","id=?",arrayOf(id.toString())) }
+        }
     }
     private val app=context.applicationContext as? net.ankio.ledger.LedgerApp
     override fun onCreate(db:SQLiteDatabase) { db.execSQL("""CREATE TABLE tasks(
@@ -58,7 +64,8 @@ class RecognitionTasks(context:Context,private val name:String="recognition.db",
             put("status",status);put("message",message.take(500));if(recordId!=null) put("record_id",recordId)
         },"id=?"+(if(status in setOf("FAILED","CANCELLED")) " AND status IN ('CAPTURING','QUEUED','RECOGNIZING')" else ""),arrayOf(id.toString()))==1
         if(updated) {
-            screenshots.state(imageOwner(id),status)
+            if(status in setOf("FAILED","NO_BILL") && this.recordId(id)==null)delete(id)
+            else screenshots.state(imageOwner(id),status)
             if(status !in setOf("CAPTURING","QUEUED","RECOGNIZING"))screenshots.cleanup()
         }
         if(updated)app?.executionLog?.event("model","task",status,JSONObject().put("taskId",id).put("recordId",recordId))
@@ -144,8 +151,8 @@ class RecognitionTasks(context:Context,private val name:String="recognition.db",
             putNull("record_id");put("status","SKIPPED");put("message",message)
         },"record_id=?",arrayOf(recordId.toString()))
     }
-    fun snapshot(limit:Int=200,start:Long?=null,end:Long?=null):JSONArray=readableDatabase.rawQuery("SELECT id,source,origin,created_at,status,message,record_id,image IS NOT NULL,diagnostic FROM tasks"+
-        (if(start!=null&&end!=null)" WHERE (created_at>=? AND created_at<?) OR status IN ('CAPTURING','QUEUED','RECOGNIZING')" else "")+
+    fun snapshot(limit:Int=200,start:Long?=null,end:Long?=null):JSONArray=readableDatabase.rawQuery("SELECT id,source,origin,created_at,status,message,record_id,image IS NOT NULL,diagnostic FROM tasks WHERE (record_id IS NOT NULL OR status NOT IN ('FAILED','NO_BILL','CANCELLED'))"+
+        (if(start!=null&&end!=null)" AND ((created_at>=? AND created_at<?) OR status IN ('CAPTURING','QUEUED','RECOGNIZING'))" else "")+
         " ORDER BY id DESC LIMIT ${limit.coerceIn(1,500)}",if(start!=null&&end!=null)arrayOf(start.toString(),end.toString()) else null).use { c ->
         JSONArray().apply { while(c.moveToNext()) put(JSONObject().put("id",c.getLong(0)).put("source",c.getString(1))
             .put("origin",c.getString(2)).put("createdAt",c.getLong(3)).put("status",c.getString(4)).put("message",c.getString(5))
@@ -158,7 +165,7 @@ class RecognitionTasks(context:Context,private val name:String="recognition.db",
     }
     fun image(id:Long):ByteArray? { readableDatabase;return screenshots.image(imageOwner(id)) }
     @Synchronized fun delete(id:Long) {
-        writableDatabase.delete("tasks","id=?",arrayOf(id.toString()));screenshots.release(imageOwner(id))
+        screenshots.release(imageOwner(id));writableDatabase.delete("tasks","id=?",arrayOf(id.toString()))
     }
     @Synchronized fun deleteForRecord(id:Long) {
         val ids=readableDatabase.rawQuery("SELECT id FROM tasks WHERE record_id=?",arrayOf(id.toString())).use { c -> buildList { while(c.moveToNext())add(c.getLong(0)) } }

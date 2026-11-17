@@ -133,7 +133,7 @@ class ChannelDefaultAccountTest {
             } finally { db.endTransaction() }
         }
         LedgerStore(context,name).use { upgraded ->
-            assertEquals(14,upgraded.readableDatabase.version)
+            assertEquals(15,upgraded.readableDatabase.version)
             assertEquals(beforeAccounts,upgraded.accounts());assertEquals(record,upgraded.get(record.id))
             assertEquals(beforeHistory,upgraded.captureHistory(record.id))
             assertEquals(selected.uid,upgraded.defaultAccount()!!.uid);assertTrue(upgraded.channelDefaultAccounts().isEmpty())

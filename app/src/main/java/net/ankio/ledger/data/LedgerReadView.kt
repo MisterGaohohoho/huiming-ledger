@@ -18,9 +18,21 @@ class LedgerReadView(private val store:LedgerStore) {
         else->throw IllegalArgumentException("报销条件无效")
     }
     fun records(month:String,search:String="",offset:Int=0,limit:Int=200,direction:String="",category:String="",beforeAt:Long?=null,beforeId:Long?=null,tag:String="",reimbursement:String="",statistical:Boolean=false,channel:String=""):JSONObject {
-        val w=window(month);require(search.length<=200 && offset in 0..1_000_000 && limit in 1..200)
+        require(offset in 0..1_000_000 && limit in 1..200)
         require((beforeAt==null)==(beforeId==null))
         if(beforeAt!=null)require(beforeAt>0 && beforeId!!>0 && offset==0)
+        val (baseWhere,baseArgs)=matchingWhere(month,search,direction,category,tag,reimbursement,statistical,channel)
+        val where=StringBuilder(baseWhere);val args=baseArgs.toMutableList()
+        if(beforeAt!=null) {
+            where.append(" AND (r.occurred_at<? OR (r.occurred_at=? AND r.id<?))")
+            args+=beforeAt.toString();args+=beforeAt.toString();args+=beforeId.toString()
+        }
+        return readRecords(where.toString(),args,offset,limit)
+    }
+
+    /** Shared by the visible list and select-all; pagination never limits deletion scope. */
+    internal fun matchingWhere(month:String,search:String="",direction:String="",category:String="",tag:String="",reimbursement:String="",statistical:Boolean=false,channel:String=""):Pair<String,List<String>> {
+        val w=window(month);require(search.length<=200)
         require(direction.isEmpty()||direction in Direction.entries.map { it.name })
         if(tag.isNotEmpty())BillTags.validate(listOf(tag))
         require(channel in setOf("","wechat","alipay","other"))
@@ -36,10 +48,10 @@ class LedgerReadView(private val store:LedgerStore) {
         if(tag.isNotEmpty()) { where.append(" AND r.state='POSTED' AND instr(r.tags,?)>0");args+=BillTags.toStorage(listOf(tag)) }
         if(category.isNotBlank()) { where.append(" AND r.category=?");args+=category }
         if(category.isNotBlank())where.append(" AND r.state='POSTED'")
-        if(beforeAt!=null) {
-            where.append(" AND (r.occurred_at<? OR (r.occurred_at=? AND r.id<?))")
-            args+=beforeAt.toString();args+=beforeAt.toString();args+=beforeId.toString()
-        }
+        return where.toString() to args
+    }
+
+    private fun readRecords(where:String,args:List<String>,offset:Int,limit:Int):JSONObject {
         val rows=JSONArray()
         store.readableDatabase.rawQuery("""SELECT r.id,r.uid,r.merchant,r.category,r.note,r.amount,r.direction,r.occurred_at,r.state,r.source,
             r.reason,r.duplicate_id,r.refund_provider,r.refund_original,r.refund_amount,r.refund_mode,r.refund_id,

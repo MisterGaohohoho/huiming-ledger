@@ -19,7 +19,7 @@ class RecognitionRecoveryOptimizationTest {
         val newId=tasks.create(Source.OCR,"shake:com.tencent.mm")
         try {
             tasks.recoverInterrupted(preserveCurrentSession=true)
-            assertEquals("FAILED",tasks.status(oldId))
+            assertNull(tasks.status(oldId))
             assertEquals("CAPTURING",tasks.status(newId))
             assertTrue(tasks.queued(newId,byteArrayOf(1,2,3)))
             tasks.recoverInterrupted(preserveCurrentSession=true)
@@ -36,7 +36,7 @@ class RecognitionRecoveryOptimizationTest {
         val tasks=RecognitionTasks(context,name)
         try {
             tasks.recoverInterrupted(preserveCurrentSession=true)
-            assertEquals("FAILED",tasks.status(oldId))
+            assertNull(tasks.status(oldId))
             val newId=tasks.create(Source.IMAGE,"image")
             assertEquals("CAPTURING",tasks.status(newId))
         } finally { tasks.close();context.deleteDatabase(name) }

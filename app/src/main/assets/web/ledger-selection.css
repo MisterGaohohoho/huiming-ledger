@@ -1,0 +1,27 @@
+/* Same colors and geometry as the original import card, with one accessible hit target. */
+button.entry-import{width:100%;text-align:left;border:0;font:inherit;cursor:pointer}
+.entry-import-icon{width:46px;height:46px;flex:0 0 46px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#ffffff9c;font-size:23px;color:#344c6c}
+.entry-import-copy{display:block;min-width:0;flex:1;border-left:1px solid #d3e3f7;padding-left:13px}
+.entry-import-copy b{display:block;white-space:normal;overflow-wrap:anywhere;line-height:1.5}
+.entry-import-copy small{line-height:1.6;overflow-wrap:anywhere}
+.entry-import .chevron{flex-shrink:0}
+#selection-heading{min-width:0;width:100%}
+#selection-heading h1{white-space:normal;overflow-wrap:anywhere;font-size:26px}
+#selection-heading p{font-size:13px;color:#81889e;margin:6px 0 0;line-height:1.6}
+.is-selecting .v21-header>.ledger-title,.is-selecting .v21-header>.header-actions{display:none}
+.is-selecting>.bottom-nav{visibility:hidden;pointer-events:none}
+.is-selecting .transaction.entry{position:relative;user-select:none;-webkit-user-select:none}
+.is-selecting .transaction.entry>.category-icon{visibility:hidden}
+.is-selecting .transaction.entry::before{content:'';position:absolute;left:13px;top:50%;transform:translateY(-50%);width:23px;height:23px;border:2px solid #b8c9c3;border-radius:50%;box-sizing:border-box;background:#fff}
+.is-selecting .transaction.entry.is-selected::before{content:'✓';color:white;background:#279e80;border-color:#279e80;font-size:16px;display:flex;align-items:center;justify-content:center}
+.is-selecting .swipe-delete{display:none}
+#selection-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:16px 18px calc(16px + env(safe-area-inset-bottom));background:#f9fbfd;border-radius:26px 26px 0 0;box-shadow:0 -4px 20px #193b3010;z-index:25}
+#selection-bar button{min-width:0;min-height:48px;border-radius:22px;padding:10px 5px;font-size:14px;white-space:normal;overflow-wrap:anywhere;background:#edf1f6}
+#selection-bar .danger{color:#b94848;background:#fae9e9}
+.batch-scope{overflow-wrap:anywhere}
+.batch-totals{margin:12px 0;font-size:14px}
+.batch-totals>div{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;padding:8px 0}
+.batch-totals dd{margin:0;overflow-wrap:anywhere;max-width:100%}
+.delete-undo{gap:12px;white-space:normal;overflow-wrap:anywhere}
+.delete-undo button{flex-shrink:0}
+@media(max-width:380px){.entry-import-icon{width:40px;height:40px;flex-basis:40px}.entry-import-copy{padding-left:7px}#selection-heading h1{font-size:23px}}

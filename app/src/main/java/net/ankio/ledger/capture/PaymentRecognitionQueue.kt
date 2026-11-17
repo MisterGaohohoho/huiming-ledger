@@ -24,10 +24,11 @@ class PaymentRecognitionQueue(private val app:LedgerApp,
         if(!hasCapacity())return false
         val epoch=if(automatic)app.channels.automaticGeneration(pkg) else app.channels.generation(ChannelSettings.Channel.OCR)
         val recognitionEpoch=app.recognitionSession.generation
-        fun allowed()=app.tasks.exists(id) && app.recognitionSession.generation==recognitionEpoch &&
+        fun feedbackAllowed()=app.recognitionSession.generation==recognitionEpoch &&
             hasCapturePermission() &&
             if(automatic)app.channels.autoAllowed(pkg) && app.channels.automaticGeneration(pkg)==epoch
             else app.channels.enabled(ChannelSettings.Channel.OCR) && app.channels.generation(ChannelSettings.Channel.OCR)==epoch
+        fun allowed()=app.tasks.exists(id) && feedbackAllowed()
         val work=app.scope.launch(start=CoroutineStart.LAZY) {
             try {
                 taskRecovery.await()
@@ -36,7 +37,7 @@ class PaymentRecognitionQueue(private val app:LedgerApp,
                     val image=app.tasks.image(id)?:throw RecognitionException("本次截图已失效，请重新摇一摇补录")
                     feedback("正在识别…",true)
                     val result=factory().processPrepared(image,Source.OCR,pkg,id,::allowed)
-                    if(allowed()) {
+                    if(feedbackAllowed()) {
                         var message=completedMessage(id,result)
                         if(message.startsWith("已记账 ¥") && app.tasks.recordId(id)?.let { app.captureHealth.successful(it,pkg) }!=true)
                             message="账单已移除，未新增记账"
@@ -48,7 +49,7 @@ class PaymentRecognitionQueue(private val app:LedgerApp,
             } catch(error:Exception) {
                 val message=(error as? RecognitionException)?.userMessage?:"识别失败，请重新补录"
                 app.tasks.update(id,"FAILED",message)
-                if(allowed())feedback(message,false)
+                if(feedbackAllowed())feedback(message,false)
             }
         }
         jobs[id]=Entry(automatic,pkg,work)

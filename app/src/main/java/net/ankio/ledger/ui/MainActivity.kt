@@ -210,13 +210,13 @@ class MainActivity : Activity() {
                         } else message("金额待核对")
                     }
                     IngestResult.DuplicateSkipped -> { dispatch("importStatus", "{\"working\":false}"); message("识别完成，请查看账本") }
-                    IngestResult.Ignored -> { dispatch("importStatus", "{\"working\":false}"); message("没有识别到账单文字，可换图或手动记账") }
+                    IngestResult.Ignored -> { previewBytes=null;dispatch("importReset", "null"); message("未识别到有效账单，请重试") }
                     is IngestResult.Skipped -> { dispatch("importStatus", "{\"working\":false}");message(result.message) }
                 }
             }
             is ImageImportState.Failed -> {
                 ledger.importer.state.value = ImageImportState.Idle
-                dispatch("importError", JSONObject.quote(state.message))
+                previewBytes=null;dispatch("importReset", "null")
                 message(state.message)
             }
             ImageImportState.Idle -> Unit
