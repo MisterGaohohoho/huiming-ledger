@@ -95,10 +95,10 @@ internal class BillReportController(private val activity:MainActivity) {
                             "xlsx"->ReportWorkbook.write(report,out,evidence::screenshot,evidence.recordAttachmentIds,evidence)
                             else->error("导出格式无效")
                         } }
-                        LocalExportFile.publish(activity,temp,"花有谱-账单汇总-${report.criteria.from}-${report.criteria.through}-${report.token.take(8)}.$extension",FORMATS.getValue(format),format=="png")
+                        LocalExportFile.publish(activity,temp,"有数-账单汇总-${report.criteria.from}-${report.criteria.through}-${report.token.take(8)}.$extension",FORMATS.getValue(format),format=="png")
                     } finally { temp.delete() }
                 }
-                val destination=if(format=="png")"相册/花有谱" else "下载/花有谱"
+                val destination=if(format=="png")"相册/有数" else "下载/有数"
                 emit("reportExport",JSONObject().put("ok",true).put("busy",false).put("message","${if(format=="pdf")"PDF 与图片材料包 ZIP"else format.uppercase()} 已保存到$destination"))
             } catch(cancelled:CancellationException) { throw cancelled }
             catch(error:Exception) { emit("reportExport",failure(error.message?:"保存失败，请检查可用空间后重试").put("busy",false)) }

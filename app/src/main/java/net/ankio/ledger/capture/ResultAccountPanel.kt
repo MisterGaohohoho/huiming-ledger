@@ -70,7 +70,7 @@ internal class ResultAccountPanel(private val context:Context) {
             option(account.uid,account.name,"$balanceLabel ¥${Money.display(account.amountCents)}")
         }
         option(null,"不关联账户","不调整账户余额")
-        if(accounts.isEmpty())options.addView(colors.text("还没有账户，可在花有谱的资产页添加",14).apply {setTextColor(colors.secondary)})
+        if(accounts.isEmpty())options.addView(colors.text("还没有账户，可在有数的资产页添加",14).apply {setTextColor(colors.secondary)})
         val list=MintScrollFrame(context).apply {viewport.addView(options);viewport.tag="account-menu-scroll"}
         val maxHeight=(context.resources.displayMetrics.heightPixels-colors.dp(360)).coerceAtLeast(colors.dp(80)).coerceAtMost(colors.dp(124))
         options.measure(View.MeasureSpec.makeMeasureSpec((bar.width-bar.paddingLeft-bar.paddingRight).coerceAtLeast(colors.dp(180)),View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED))

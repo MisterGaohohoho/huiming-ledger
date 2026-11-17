@@ -6,7 +6,7 @@ const gapProbe=document.createElement('div');gapProbe.style.cssText='display:fle
 let query='',searching=false;
 let ledgerView=null,viewKey='',viewLimit=200,searchTimer,undoTimer;
 let dataRevision='',loadedScope='',loadingPage=false,editorBaseline=null,recordReturnControl=null;
-const listScope=()=>JSON.stringify([month,query,filter]);
+const listScope=()=>JSON.stringify([month,query,filter,LedgerScope.channel,statsReimbursement]);
 let recognitionTasks=[],recordPanelOpen=false,recordPanelClosing=false,recordAnchor=null,recordHome=null;
 let ledgerTouchActive=false,ledgerRenderPending=false;
 let lastControl=null,lastControlAt=0,sheetAnchor=null,sheetClosing=false,manualOpen=false,manualClosing=false,manualHome=null,manualAnchor=null,manualReturnControl=null;
@@ -16,7 +16,7 @@ function nativeOrigin(control){const r=controlBounds(control);if(!r)return '{}';
 document.addEventListener('click',e=>{const control=e.target.closest('button,[role="button"]');if(control){lastControl=control;lastControlAt=Date.now()}},true);
 let automatic={enabled:false,applications:[]},screenshotStorage={},captureHealth={enabled:false,ready:false};
 let records=[],channels={},accounts=[],bankOptions=[],customCategories={expense:[],income:[]},automationRunning=false,filter='expense',page='ledger',month=localMonth(Date.now()),draft=null,working=false,importError='',previewUrl='',timer;
-const captureName=r=>r.captureMode==='page'||['page_auto','wechat_auto','payment_auto'].some(origin=>String(r.origin||'').startsWith(origin))||/^(page_auto|wechat_auto|payment_auto)/.test(String(r.diagnostic?.trigger||''))?'自动记账':sourceNames[r.source];
+const captureName=r=>r.importLabel||(r.rawText?.startsWith('洁账导入：')?'洁账导入':r.rawText?.startsWith('账单文件导入：')?'账单导入':'')||(r.captureMode==='page'||['page_auto','wechat_auto','payment_auto'].some(origin=>String(r.origin||'').startsWith(origin))||/^(page_auto|wechat_auto|payment_auto)/.test(String(r.diagnostic?.trigger||''))?'自动记账':sourceNames[r.source]);
 const sourceNames={OCR:'摇一摇',IMAGE:'图片导入',SMS:'自动 · 短信',NOTIFICATION:'自动 · 通知',MANUAL:'手动'};
 const categories=['餐饮','交通','购物','娱乐','居住','医疗','教育','服饰','日用','通讯','人情','其他','工资','礼物','其他收入','退款'];
 const amountFormatter=new Intl.NumberFormat('en-US',{minimumFractionDigits:0,maximumFractionDigits:2});
@@ -26,7 +26,7 @@ const signedMoney=(cents,income=false)=>`${amountPrefix(income)} ${money(cents)}
 function escapeText(value){const e=document.createElement('span');e.textContent=value??'';return e.innerHTML.replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function localTime(time){const d=new Date(time),pad=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`}
 function localMonth(time){const d=new Date(time),value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;return value.length<7?localTime(time).slice(0,7):value.slice(0,7)}
-function monthRecords(){return records.filter(r=>r.state==='POSTED'&&localMonth(r.occurredAt)===month)}
+function monthRecords(){return records.filter(r=>r.state==='POSTED'&&LedgerScope.contains(month,r.occurredAt))}
 function statisticalAmount(r){return Number(r.statisticalAmountCents??r.amountCents??0)}
 function sums(list){return list.reduce((a,r)=>{a[r.direction==='INCOME'?'income':'expense']+=statisticalAmount(r);return a},{income:0,expense:0})}
 function notify(text){const t=document.querySelector('.toast');t.textContent=text;t.classList.add('show');clearTimeout(timer);timer=setTimeout(()=>t.classList.remove('show'),2600)}
@@ -34,7 +34,7 @@ function showUndo(deletion){let bar=$('delete-undo');clearTimeout(undoTimer);if(
 function loadedTotals(){return ledgerView?.summary?.totals||sums(monthRecords())}
 function loadedCategories(type){return ledgerView?.summary?.categories?.filter(r=>r.direction===(type==='income'?'INCOME':'EXPENSE'))||categoryTotals(monthRecords().filter(r=>r.direction===(type==='income'?'INCOME':'EXPENSE')))}
 function remember(){try{native?.remember(JSON.stringify(getState()))}catch(_){}}
-function getState(){return {page,recordPanel:recordPanelOpen,manualPanel:manualOpen,accountDetail:AccountExperience.state(),manualSelection:RecordExperience.state(),month,filter,billReport:BillReportUI.state(),editorBaseline,draft:draft?{...draft,...readDraft()}:null,previewUrl,manual:{amount:$('manual-amount').value,note:$('manual-note').value,type:manualType,category:manualCategory},statsType,statsReimbursement,rankingType,assetsHidden}}
+function getState(){return {page,recordPanel:recordPanelOpen,manualPanel:manualOpen,accountDetail:AccountExperience.state(),manualSelection:RecordExperience.state(),month,ledgerChannel:LedgerScope.channel,filter,billReport:BillReportUI.state(),editorBaseline,draft:draft?{...draft,...readDraft()}:null,previewUrl,manual:{amount:$('manual-amount').value,note:$('manual-note').value,type:manualType,category:manualCategory},statsType,statsReimbursement,rankingType,assetsHidden}}
 function go(id){closeSheet(false);$('stats-reimbursement').open=false;if(manualOpen||manualClosing)closeManual(false);if(recordPanelOpen||recordPanelClosing)closeRecordPanel(false);if(id!=='ledger'&&searching)setSearchOpen(false,false);page=id;document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('mobile-active',s.id===id));if(id==='ledger')MonthlyBudget.open();if(id==='import'&&!draft)newDraft();if(id==='manual'){drawCategories();RecordExperience.manualFields()}if(id==='stats')drawStats();if(id==='assets')drawAssets();if(id==='account-detail')AccountExperience.renderDetail();remember()}
 function categoryStyle(r){return [iconForCategory(r.category),r.direction==='INCOME'?'pink':/交通|停车|高速/.test(r.category)?'blue':/购物|服饰|日用/.test(r.category)?'orange':'green']}
 function ledgerIcon(r,pending=false){
@@ -47,37 +47,38 @@ function ledgerIcon(r,pending=false){
 
 function render(){
  const list=monthRecords(),total=loadedTotals(),[y,m]=month.split('-');
- document.querySelector('#month h1').textContent=`${y}年${Number(m)}月`;
+ document.querySelector('#month h1').textContent=LedgerScope.label(month);
  const selected=filter==='income'?'income':'expense',direction=selected==='income'?'INCOME':'EXPENSE';
- document.querySelector('.balance-title').textContent=selected==='income'?'本月收入':'本月支出';
+ document.querySelector('.balance-title').textContent=LedgerScope.prefix(month)+(selected==='income'?'收入':'支出');
  document.querySelector('.balance-number').innerHTML=`<small>¥</small> ${money(total[selected])}`;
  $('home-count').textContent=`共 ${total[selected+'Count']??list.filter(r=>r.direction===direction).length} 笔${selected==='income'?'收入':'消费'}`;
  document.querySelector('.totals').innerHTML=`<div>收入 ¥ ${money(total.income)}</div><div>支出 ¥ ${money(total.expense)}</div>`;
  drawChart(list,new Date(),ledgerView?.summary?.days);
  const previous=localMonth(new Date(Number(y),Number(m)-2,1).getTime()),before=ledgerView?.summary?.previous?.[selected]??sums(records.filter(r=>r.state==='POSTED'&&localMonth(r.occurredAt)===previous))[selected];
  $('home-change').textContent=before?`较上月 ${total[selected]>=before?'↑':'↓'} ${Math.abs((total[selected]-before)/before*100).toFixed(0)}%`:'本月每日趋势';
- MonthlyBudget.render(total.expense,selected==='income',month);
+ MonthlyBudget.render(total.expense,selected==='income',month);$('monthly-budget').hidden=selected==='income'||!LedgerScope.isMonth(month)||!!LedgerScope.channel||!!statsReimbursement;
  const search=query.toLowerCase();
- const shown=records.filter(r=>(r.state==='POSTED'||r.state==='REVIEW')&&(query||localMonth(r.occurredAt)===month)
+ const shown=records.filter(r=>(r.state==='POSTED'||r.state==='REVIEW')&&(query||LedgerScope.contains(month,r.occurredAt))
   &&(filter==='income'?r.direction==='INCOME':r.direction!=='INCOME')
+  &&(!LedgerScope.channel||(r.paymentProvider||'other')===LedgerScope.channel)&&(!statsReimbursement||!!r.requiresReimbursement===(statsReimbursement==='required'))
   &&(!query||[r.merchant,r.category,r.note,r.transactionId,sourceNames[r.source]].some(v=>String(v||'').toLowerCase().includes(search))));
- const attempts=recognitionTasks.filter(t=>!t.recordId&&!['SKIPPED','DUPLICATE'].includes(t.status)&&localMonth(t.createdAt)===month&&(!query||[captureName(t),taskNames[t.status],t.message].some(v=>String(v||'').toLowerCase().includes(search))));
+ const attempts=recognitionTasks.filter(t=>!t.recordId&&!['SKIPPED','DUPLICATE'].includes(t.status)&&LedgerScope.contains(month,t.createdAt)&&(!query||[captureName(t),taskNames[t.status],t.message].some(v=>String(v||'').toLowerCase().includes(search))));
  const timeline=[...shown.map(record=>({record,time:record.occurredAt,id:record.id})),...attempts.map(task=>({task,time:task.createdAt,id:task.id}))].sort((a,b)=>b.time-a.time||b.id-a.id||Number(!!a.task)-Number(!!b.task));
  const groups=new Map();for(const item of timeline){const key=localTime(item.time).slice(0,10);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(item)}
- const dailyTotals=new Map();if(!query&&ledgerView?.summary?.days)for(const row of ledgerView.summary.days)if(row.direction===direction)dailyTotals.set(row.day,(dailyTotals.get(row.day)||0)+row.amount);
+ const dailyTotals=new Map();if(!query&&ledgerView?.summary?.days)for(const row of ledgerView.summary.days)if(row.direction===direction)dailyTotals.set(row.date||row.day,(dailyTotals.get(row.date||row.day)||0)+row.amount);
  const today=localTime(Date.now()).slice(0,10),yesterday=localTime(Date.now()-86400000).slice(0,10);
  const timelineMarkup=[...groups].map(([key,items])=>{
   const rows=items.filter(item=>item.record).map(item=>item.record),d=new Date(items[0].time);
   const label=key===today?'今天':key===yesterday?'昨天':['星期日','星期一','星期二','星期三','星期四','星期五','星期六'][d.getDay()];
-  const pending=rows.filter(r=>r.state==='REVIEW').length,dayTotal=!query&&ledgerView?.summary?.days?(dailyTotals.get(d.getDate())||0):sums(rows.filter(r=>r.state==='POSTED'))[selected];
-  return `<div class="date-line day-header"><span>${d.getMonth()+1}月${d.getDate()}日　${label}</span><span>${pending?pending+' 笔待确认':rows.some(r=>r.state==='POSTED')?'¥ '+money(dayTotal):'识别记录'}</span></div><section class="card transactions">`+items.map(item=>{
+  const pending=rows.filter(r=>r.state==='REVIEW').length,dayTotal=!query&&ledgerView?.summary?.days?(dailyTotals.get(key)??dailyTotals.get(d.getDate())??0):sums(rows.filter(r=>r.state==='POSTED'))[selected];
+  return `<div class="date-line day-header"><span>${LedgerScope.isMonth(month)?'':d.getFullYear()+'年'}${d.getMonth()+1}月${d.getDate()}日　${label}</span><span>${pending?pending+' 笔待确认':rows.some(r=>r.state==='POSTED')?'¥ '+money(dayTotal):'识别记录'}</span></div><section class="card transactions">`+items.map(item=>{
    if(item.task)return recognitionRow(item.task);
    const r=item.record;
    const pending=r.state==='REVIEW',income=r.direction==='INCOME',source=captureName(r)||'手动',aiSource=['OCR','IMAGE'].includes(r.source);
-   return swipeRow(`<button class="transaction entry ${pending?'ai-pending-entry':''}" ${pending?'data-pending':'data-record'}="${r.id}" aria-label="${pending?'':'编辑'}${escapeText(r.merchant||'待补全商户')}，${pending?'待确认记账':(income?'收入':'支出')+money(r.amountCents)+'元'}，${escapeText(r.category||'其他')}，${escapeText(source)}">${ledgerIcon(r,pending)}<span class="record-main entry-text"><span class="record-name entry-title">${escapeText(r.merchant||'待补全商户')}</span><span class="record-meta entry-subtitle"><span class="record-time">${localTime(r.occurredAt).slice(11)}</span><span class="record-category">${escapeText(r.category||'其他')}</span>${BillLabels.badge(r)}${r.isReimbursementRepayment?`<span class="tag reimbursement-received">含报销到账 ¥${money(r.reimbursementReceivedCents)}</span>`:""}<span class="tag ${aiSource?'ai':r.source==='MANUAL'?'manual':''}">${escapeText(source)}</span></span></span>${pending?'<span class="pending tag">待确认</span>':`<span class="amount entry-amount ${income?'positive':''}">${signedMoney(r.amountCents,income)}</span>`}<span class="chevron" aria-hidden="true">›</span></button>`,r.id,false,r.merchant||'账单');
+   return swipeRow(`<button class="transaction entry ${pending?'ai-pending-entry':''}" ${pending?'data-pending':'data-record'}="${r.id}" aria-label="${pending?'':'编辑'}${escapeText(r.merchant||'待补全商户')}，${pending?'待确认记账':(income?'收入':'支出')+money(r.amountCents)+'元'}，${escapeText(r.category||'其他')}，${escapeText(source)}">${ledgerIcon(r,pending)}<span class="record-main entry-text"><span class="record-name entry-title">${escapeText(r.merchant||'待补全商户')}</span><span class="record-meta entry-subtitle"><span class="record-time">${localTime(r.occurredAt).slice(11)}</span><span class="record-category">${escapeText(r.category||'其他')}</span>${r.paymentProvider?`<span class="record-provider">${r.paymentProvider==='wechat'?'微信':'支付宝'}</span>`:''}${BillLabels.badge(r)}${r.isReimbursementRepayment?`<span class="tag reimbursement-received">含报销到账 ¥${money(r.reimbursementReceivedCents)}</span>`:""}<span class="tag ${aiSource?'ai':r.source==='MANUAL'?'manual':''}">${escapeText(source)}</span></span></span>${pending?'<span class="pending tag">待确认</span>':`<span class="amount entry-amount ${income?'positive':''}">${signedMoney(r.amountCents,income)}</span>`}<span class="chevron" aria-hidden="true">›</span></button>`,r.id,false,r.merchant||'账单');
   }).join('')+'</section>';
  }).join('');
- renderTimeline((query?'<p class="search-scope">搜索全部月份</p>':'')+(timelineMarkup||`<div class="empty-state">${query?'未找到匹配的账单':'这个月还没有'+(selected==='income'?'收入':'支出')+'账单'}<br>点击底部 + 手动记账或导入账单截图</div>`)+(ledgerView?.hasMore?'<button type="button" id="load-more-records" class="load-more-records">加载更多账单</button>':''));
+ renderTimeline((query?'<p class="search-scope">搜索全部月份</p>':'')+(timelineMarkup||`<div class="empty-state">${query?'未找到匹配的账单':'所选范围还没有'+(selected==='income'?'收入':'支出')+'账单'}<br>点击底部 + 手动记账或导入账单截图</div>`)+(ledgerView?.hasMore?'<button type="button" id="load-more-records" class="load-more-records">加载更多账单</button>':''));
  if($('load-more-records'))$('load-more-records').onclick=loadMoreRecords;
  $('entries').querySelectorAll('.merchant-icon img').forEach(img=>{const failed=()=>{img.parentElement.classList.remove('merchant-icon');img.remove()};img.onerror=failed;if(img.complete&&!img.naturalWidth)failed()});
  $('entries').querySelectorAll('[data-record],[data-pending]').forEach(e=>e.onclick=()=>openRecord(Number(e.dataset.record||e.dataset.pending),false,e.getBoundingClientRect()));
@@ -159,8 +160,9 @@ function drawSettings(){
  }
 }
 function drawChart(list,now=new Date(),aggregated=null){
+ if(!LedgerScope.isMonth(month)){$('home-bars').innerHTML='';$('home-change').textContent='查看收支趋势';return}
  const [year,mo]=month.split('-').map(Number),days=new Date(year,mo,0).getDate(),current=localMonth(now.getTime());
- const eligible=list.filter(r=>r.state==='POSTED'&&localMonth(r.occurredAt)===month&&Number.isSafeInteger(r.amountCents)&&r.amountCents>0&&['INCOME','EXPENSE'].includes(r.direction));
+ const eligible=list.filter(r=>r.state==='POSTED'&&LedgerScope.contains(month,r.occurredAt)&&Number.isSafeInteger(r.amountCents)&&r.amountCents>0&&['INCOME','EXPENSE'].includes(r.direction));
  // Current months stop at today, except explicitly dated future records. Past months use the full month.
  const lastDay=month<current?days:Math.max(month===current?now.getDate():1,...(aggregated?aggregated.map(r=>r.day):eligible.map(r=>new Date(r.occurredAt).getDate())));
  const mode=filter==='income'?'income':'expense',name=mode==='income'?'累计收入':'累计支出',values=Array(lastDay).fill(0);
@@ -179,6 +181,7 @@ function drawChart(list,now=new Date(),aggregated=null){
  svg.dataset.endDay=lastDay;svg.dataset.endCents=sum;svg.dataset.maxCents=max;svg.dataset.dailyCents=JSON.stringify(cumulative);
 }
 function showTrendDetails(){
+ if(!LedgerScope.isMonth(month)){go('stats');return}
  const svg=document.querySelector('.chart svg'),last=Number(svg.dataset.endDay),[year,mo]=month.split('-').map(Number),list=monthRecords(),mode=filter==='income'?'income':'expense',label=mode==='income'?'收入':'支出';let cumulative=0;
  const rows=Array.from({length:last},(_,i)=>{const day=i+1,total=ledgerView?.summary?.days?ledgerView.summary.days.filter(r=>r.day===day&&r.direction===(mode==='income'?'INCOME':'EXPENSE')).reduce((s,r)=>s+r.amount,0):sums(list.filter(r=>new Date(r.occurredAt).getDate()===day))[mode];cumulative+=total;return `<tr><th scope="row">${mo}/${day}</th><td>${money(total)}</td><td>${money(cumulative)}</td></tr>`}).join('');
  showSheet(`${year}年${mo}月每日${label}`,`<div class="trend-curve">${svg.outerHTML}</div><p class="sheet-copy">仅计入已确认${label}账单。月初从 0 开始，逐日累加${label}金额；待确认及失败的识别不计入。</p><div class="trend-table-wrap"><table class="trend-table"><thead><tr><th scope="col">日期</th><th scope="col">当日${label}（元）</th><th scope="col">累计${label}（元）</th></tr></thead><tbody>${rows}</tbody></table></div>`);
@@ -188,10 +191,10 @@ function refresh(){
  if(!native){render();return true}
  try{
   const scope=listScope();
-  const result=JSON.parse(native.snapshotFirst?native.snapshotFirst(month,query,filter==='income'?'INCOME':'EXPENSE',viewKey):native.snapshotView?native.snapshotView(month,query,viewLimit,filter==='income'?'INCOME':'EXPENSE',viewKey):native.snapshot());
+  const result=JSON.parse(native.unifiedSnapshot?native.unifiedSnapshot(JSON.stringify({period:month,search:query,direction:filter==='income'?'INCOME':'EXPENSE',channel:LedgerScope.channel,reimbursement:statsReimbursement})):native.snapshotFirst?native.snapshotFirst(month,query,filter==='income'?'INCOME':'EXPENSE',viewKey):native.snapshotView?native.snapshotView(month,query,viewLimit,filter==='income'?'INCOME':'EXPENSE',viewKey):native.snapshot());
   if(result.error||result.ok===false)throw Error(result.error);
   if(result.unchanged)return false;
-  const retainTail=!!native.snapshotFirst&&loadedScope===scope&&dataRevision===result.dataRevision&&records.length>(result.records||[]).length;
+  const retainTail=!!(native.unifiedSnapshot||native.snapshotFirst)&&loadedScope===scope&&dataRevision===result.dataRevision&&records.length>(result.records||[]).length;
   const previousView=ledgerView;
   records=retainTail?[...result.records,...records.slice(result.records.length)]:result.records;
   viewKey=result.viewKey||'';dataRevision=result.dataRevision||'';loadedScope=scope;
@@ -204,11 +207,11 @@ function refresh(){
 }
 function loadMoreRecords(){
  if(loadingPage)return;
- if(!native?.recordPage){viewLimit+=200;refresh();return}
+ if(!native?.recordPage&&!native?.unifiedSnapshot){viewLimit+=200;refresh();return}
  const cursor=ledgerView?.nextCursor;if(!cursor)return;
  loadingPage=true;
  try{
-  const result=JSON.parse(native.recordPage(month,query,filter==='income'?'INCOME':'EXPENSE',cursor.occurredAt,cursor.id,dataRevision));
+  const result=JSON.parse(native.unifiedSnapshot?native.unifiedSnapshot(JSON.stringify({period:month,search:query,direction:filter==='income'?'INCOME':'EXPENSE',channel:LedgerScope.channel,reimbursement:statsReimbursement,beforeAt:cursor.occurredAt,beforeId:cursor.id,revision:dataRevision})):native.recordPage(month,query,filter==='income'?'INCOME':'EXPENSE',cursor.occurredAt,cursor.id,dataRevision));
   if(!result.ok)throw Error(result.error);
   if(result.reset){viewKey='';refresh();notify('账本已更新，请继续加载');return}
   const knownIds=new Set(records.map(r=>r.id));records.push(...result.records.filter(r=>!knownIds.has(r.id)));
@@ -228,8 +231,10 @@ function syncRecordHistory(){
  if(revision(current)===revision(draft))return;
  const wasDirty=editorDirty(),edits=readDraft(),financialChanged=current.amountCents!==draft.amountCents;
  const merchant=edits.merchant===(draft._storedMerchant??draft.merchant)?current.merchant:edits.merchant;
- const tags=JSON.stringify(edits.tags)===JSON.stringify(draft.tags||[])?current.tags:edits.tags;
- const requiresReimbursement=edits.requiresReimbursement===!!draft.requiresReimbursement?!!current.requiresReimbursement:edits.requiresReimbursement;
+ // The draft already contains local edits after recreation; compare with the saved baseline.
+ const baseline=editorBaseline?JSON.parse(editorBaseline):draft;
+ const tags=JSON.stringify(edits.tags)===JSON.stringify(baseline.tags||[])?current.tags:edits.tags;
+ const requiresReimbursement=edits.requiresReimbursement===!!baseline.requiresReimbursement?!!current.requiresReimbursement:edits.requiresReimbursement;
  draft={...draft,...recordWithDetails(current),...edits,merchant,tags,requiresReimbursement,_storedMerchant:current.merchant,amount:financialChanged?String(current.amountCents/100):edits.amount};
  updateEditor();if(!wasDirty)editorBaseline=JSON.stringify(readDraft());remember();
 }
@@ -296,7 +301,7 @@ function openRecord(id,keepPreview=false,anchor=null){
  if(!r&&native?.recordDetails){try{const detail=JSON.parse(native.recordDetails(id));if(detail.ok)r={...detail.record,rawText:detail.rawText,history:detail.history,_detailsLoaded:true}}catch(_){}}
  if(!r){notify('账单已不存在');return}
  const targetMonth=localMonth(r.occurredAt),targetFilter=r.direction==='INCOME'?'income':'expense';
- if(month!==targetMonth||filter!==targetFilter){month=targetMonth;filter=targetFilter;viewLimit=200;viewKey='';refresh()}
+ if(!LedgerScope.contains(month,r.occurredAt)||filter!==targetFilter){if(!LedgerScope.contains(month,r.occurredAt))month=targetMonth;filter=targetFilter;viewLimit=200;viewKey='';refresh()}
  if(!['ledger','stats','account-detail','channel-ledger','offline-analysis'].includes(page))go('ledger');
  recordReturnControl=control||document.activeElement;applyRecord(records.find(x=>x.id===id)||r,keepPreview);showRecordPanel(origin);remember();
 }
@@ -332,9 +337,9 @@ function closeSheet(animate=true){
 }
 $('sheet').addEventListener('cancel',e=>{e.preventDefault();if(!BillReportUI.back())closeSheet()});
 $('sheet').addEventListener('click',e=>{if(e.target===$('sheet')){const r=$('sheet').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeSheet()}});
-function about(){if(native?.aboutFrom)native.aboutFrom(nativeOrigin(document.querySelector('.about-app')));else if(native)native.about();else showSheet('关于花有谱','<p class="sheet-copy">花有谱 · 少点手动，收支有谱</p>')}
+function about(){if(native?.aboutFrom)native.aboutFrom(nativeOrigin(document.querySelector('.about-app')));else if(native)native.about();else showSheet('关于有数','<p class="sheet-copy">有数 · 每笔清楚，心中有数</p>')}
 function submitDraft(confirmDuplicate=false){if(draft?.refund&&draft.state!=='POSTED'){chooseRefundTarget();return}if(working){notify('正在识别，请稍候');return}const values=readDraft();$('amount').parentElement.classList.remove('error-field');if(!/^\d+(\.\d{1,2})?$/.test(values.amount)||(Number(values.amount)<0||(Number(values.amount)===0&&!(draft?.refund&&draft.state==='POSTED'&&draft.amountCents===0)))){$('amount').parentElement.classList.add('error-field');$('amount').focus();notify('请输入大于零、最多两位小数的金额');return}if(!Number.isFinite(values.occurredAt)){$('occurred-at').focus();notify('请选择有效交易时间');return}if(!native){notify('请在 Android 应用中保存账单');return}const result=JSON.parse(native.save(JSON.stringify({...values,id:draft?.id||0,recognitionTaskId:draft?.recognitionTaskId||0,confirmDuplicate})));if(result.duplicateRequired){showSheet('疑似重复，仍然保存？','<p class="sheet-copy">这笔账单可能已从其他渠道记录，请核对后再确认。</p><div class="sheet-actions"><button onclick="closeSheet()">返回核对</button><button class="primary" id="confirm-duplicate">仍然保存</button></div>');$('confirm-duplicate').onclick=()=>submitDraft(true);return}if(!result.ok){notify(result.error||'保存失败，请重试');return}const edited=draft?.state==='POSTED';filter=values.direction==='INCOME'?'income':'expense';refresh();cancelEditor(true);notify(edited?'修改已保存':'记账成功')}
-function restoreState(state){if(!state)return;month=/^\d{4}-\d{2}$/.test(state.month)?state.month:month;filter=state.filter==='income'?'income':'expense';draft=state.draft||null;editorBaseline=typeof state.editorBaseline==='string'?state.editorBaseline:null;if(draft)updateEditor();previewUrl=state.previewUrl||'';if(state.manual){manualType=state.manual.type==='income'?'income':'expense';manualCategory=state.manual.category||'餐饮';$('manual-amount').value=state.manual.amount||'';$('manual-note').value=state.manual.note||'';$('manual-note-count').textContent=$('manual-note').value.length+'/500'}statsType=['expense','income','all'].includes(state.statsType)?state.statsType:'expense';statsReimbursement=['','required','notRequired'].includes(state.statsReimbursement)?state.statsReimbursement:'';rankingType=state.rankingType==='income'?'income':'expense';assetsHidden=!!state.assetsHidden;go(['ledger','import','settings','manual','stats','assets','account-detail'].includes(state.page)?state.page:'ledger');refresh();if(draft){updateEditor();if(state.recordPanel)showRecordPanel(null)}if(state.manualPanel)beginManual(false);RecordExperience.restore(state.manualSelection);AccountExperience.restore(state.accountDetail);BillReportUI.restore(state.billReport);remember()}
+function restoreState(state){if(!state)return;month=LedgerScope.valid(state.month)?state.month:month;LedgerScope.channel=['','wechat','alipay','other'].includes(state.ledgerChannel)?state.ledgerChannel:'';filter=state.filter==='income'?'income':'expense';draft=state.draft||null;editorBaseline=typeof state.editorBaseline==='string'?state.editorBaseline:null;if(draft)updateEditor();previewUrl=state.previewUrl||'';if(state.manual){manualType=state.manual.type==='income'?'income':'expense';manualCategory=state.manual.category||'餐饮';$('manual-amount').value=state.manual.amount||'';$('manual-note').value=state.manual.note||'';$('manual-note-count').textContent=$('manual-note').value.length+'/500'}statsType=['expense','income','all'].includes(state.statsType)?state.statsType:'expense';statsReimbursement=['','required','notRequired'].includes(state.statsReimbursement)?state.statsReimbursement:'';rankingType=state.rankingType==='income'?'income':'expense';assetsHidden=!!state.assetsHidden;go(['ledger','import','settings','manual','stats','assets','account-detail'].includes(state.page)?state.page:'ledger');refresh();if(draft){updateEditor();if(state.recordPanel)showRecordPanel(null)}if(state.manualPanel)beginManual(false);RecordExperience.restore(state.manualSelection);AccountExperience.restore(state.accountDetail);BillReportUI.restore(state.billReport);remember()}
 window.LedgerUI={getState,back(){if(BillReportUI.back())return true;if($('stats-reimbursement').open){$('stats-reimbursement').open=false;$('stats-reimbursement').querySelector('summary').focus();return true}if(window.LedgerSetup?.isOpen()){window.LedgerSetup.close();return true}if($('sheet').open){closeSheet();return true}if(manualOpen||manualClosing){if(!manualClosing)closeManual();return true}if(recordPanelOpen||recordPanelClosing){if(!recordPanelClosing)cancelEditor();return true}if(searching){setSearchOpen(false);return true}if(page==='account-detail'){go('assets');return true}if(page!=='ledger'){go('ledger');return true}return false},event(type,data){switch(type){case'billReport':BillReportUI.result(data);break;case'reportExport':BillReportUI.exportResult(data);break;case'fileOperation':if(data){showSheet('文件处理中',`<div class="export-progress" role="status"><span class="recognition-spinner" aria-hidden="true"></span><p>${escapeText(data)}…</p></div>`);$('sheet').dataset.fileOperation='true'}else if($('sheet').dataset.fileOperation){closeSheet();delete $('sheet').dataset.fileOperation}break;case'permissionSetup':window.LedgerSetup?.render(data);break;case'fontScale':document.body.classList.toggle('large-text',data>=1.4);document.body.style.setProperty('--scaled-fab-font',`${35/Math.max(1,data)}px`);break;case'refresh':if(refresh()){if(page==='stats')drawStats();if(page==='assets')drawAssets();if(page==='account-detail')AccountExperience.renderDetail();if(page==='manual')drawCategories()}break;case'navigate':go(data);break;case'message':notify(data);break;case'restoreState':restoreState(data);break;case'openRecord':openRecord(data,true);break;case'preview':previewUrl=data.url;updateEditor();break;case'importStatus':working=!!data.working;if(working){newDraft();if(data.taskId){draft.recognitionTaskId=data.taskId;draft.taskStatus='CAPTURING'}go('import')}if(data.error)importError=String(data.error);updateEditor();break;case'importError':working=false;importError=typeof data==='string'?data:String(data?.error||'识别失败，请重新选择截图重试');updateEditor();break}}};
 document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;viewLimit=200;refresh();remember()});
 document.querySelectorAll('[data-channel]').forEach(s=>s.onclick=()=>setChannel(s.dataset.channel,s.getAttribute('aria-checked')!=='true'));
@@ -365,7 +370,7 @@ function deleteEntry(id,task=false){
 }
 $('delete-record').onclick=()=>requestDelete(draft?.recognitionTaskId||draft?.id,!!draft?.recognitionTaskId);
 function showDataTools(){
- showSheet('账单与备份',`<button class="sheet-row" id="import-bills"><span><b>导入账单</b><small>通用 CSV / 钱迹模板 · 预览后导入</small></span><span aria-hidden="true">›</span></button><button class="sheet-row" id="export-bills"><span><b>导出全部账单</b><small>CSV 表格 · 查看或迁移到其他记账应用</small></span><span aria-hidden="true">›</span></button><button class="sheet-row" id="export-backup"><span><b>完整备份</b><small>ZIP · 账单、截图、商户图标及账户</small></span><span aria-hidden="true">›</span></button><button class="sheet-row" id="restore-backup"><span><b>恢复备份</b><small>支持 ZIP 与旧版 JSON，保留已有编辑</small></span><span aria-hidden="true">›</span></button>`);
+ showSheet('账单与备份',`<button class="sheet-row" id="import-bills"><span><b>导入账单</b><small>微信 / 支付宝 / 洁账 / 通用 CSV / 钱迹 · 自动识别</small></span><span aria-hidden="true">›</span></button><button class="sheet-row" id="export-bills"><span><b>导出全部账单</b><small>CSV 表格 · 查看或迁移到其他记账应用</small></span><span aria-hidden="true">›</span></button><button class="sheet-row" id="export-backup"><span><b>完整备份</b><small>ZIP · 账单、截图、商户图标及账户</small></span><span aria-hidden="true">›</span></button><button class="sheet-row" id="restore-backup"><span><b>恢复备份</b><small>支持 ZIP 与旧版 JSON，保留已有编辑</small></span><span aria-hidden="true">›</span></button>`);
  $('import-bills').onclick=()=>{closeSheet();native?.importBills?.()};
  $('export-bills').onclick=showBillExport;
  $('export-backup').onclick=()=>{closeSheet();native?.backup('export')};

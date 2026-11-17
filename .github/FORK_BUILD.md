@@ -27,3 +27,7 @@ The build checks the resulting signer against the configured certificate digest.
 The published assets include the signed ARM64 APK, checksums, build metadata and
 matching public source ZIP. The fork certificate differs from upstream; export an
 in-app backup before switching from an upstream-signed installation.
+
+Current artifacts use the `Youshu-Ledger-` prefix and the application label is 有数.
+The package `net.ankio.ledger` and fork certificate are unchanged, so prior fork
+releases can be upgraded in place without uninstalling.

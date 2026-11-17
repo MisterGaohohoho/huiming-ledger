@@ -1,10 +1,10 @@
 <p align="center">
-  <img src=".github/branding/huayoupu-icon.png" width="88" height="88" alt="花有谱" />
+  <img src=".github/branding/youshu-icon.png" width="88" height="88" alt="有数" />
 </p>
 
-<h1 align="center">花有谱 · Huayoupu</h1>
+<h1 align="center">有数 · Youshu</h1>
 
-<p align="center"><strong>少点手动，收支有谱。</strong></p>
+<p align="center"><strong>每笔清楚，心中有数。</strong></p>
 
 <p align="center">支付后自动识别记账，漏记时摇一摇补录。识别、账本和统计都在本机完成，无需账号或服务器。</p>
 
@@ -12,11 +12,11 @@
 
 <p align="center"><a href="https://github.com/MisterGaohohoho/huiming-ledger/releases">下载本 Fork APK</a> · <a href="https://github.com/MisterGaohohoho/huiming-ledger/actions/workflows/android.yml">构建与测试</a></p>
 
-本 Fork 基于 [AldenHe/huayoupu-ledger](https://github.com/AldenHe/huayoupu-ledger)，已同步至上游 `ea07c243`（0.5.114-v6）。新增 [Personal-Bill](https://github.com/MisterGaohohoho/Personal-Bill) 月报、年报与平台账单分析的离线适配，直接使用花有谱的本地账本。版本为 **0.5.115-offline.1**，以预发布版提供。
+本 Fork 基于 [AldenHe/huayoupu-ledger](https://github.com/AldenHe/huayoupu-ledger)，已同步至上游 `ea07c243`（0.5.114-v6）。新增 [Personal-Bill](https://github.com/MisterGaohohoho/Personal-Bill) 月报、年报与平台账单分析的离线适配，直接使用有数的本地账本。版本为 **0.5.116-youshu.1**，以预发布版提供。
 
-首页进入 **微信账单 / 支付宝账单**，导入官方 CSV 或 XLSX；统计页进入 **月报与年报**。账单、分类、退款、报销和账户余额共用原有记账数据，详情编辑后同步刷新。[使用说明与适配范围](.github/OFFLINE_BILLS.md)
+在 **我的 → 账单与备份 → 导入账单** 选择文件，自动识别微信、支付宝、洁账 XLSX、通用 CSV 和钱迹格式。首页与统计页共用 **按月 / 按年 / 全部 / 自定义** 时间范围及支付渠道、报销筛选。洁账导入正常计入总账和统计，不单列来源筛选项。账单、分类、退款、报销和账户余额共用原有记账数据，详情编辑后同步刷新。[使用说明与适配范围](.github/OFFLINE_BILLS.md)
 
-本 Fork 使用独立长期签名，与原作者 APK 签名不同。切换前请导出完整备份，再卸载原版、安装本 Fork 并恢复备份；后续本 Fork 版本沿用同一签名。
+本 Fork 使用独立长期签名，与原作者 APK 签名不同。切换前请导出完整备份，再卸载原版、安装本 Fork 并恢复备份；已安装本 Fork 0.5.115-offline.1 的用户可以直接覆盖升级；后续本 Fork 版本沿用同一签名。
 
 ## 能做什么
 
@@ -24,7 +24,7 @@
 - **摇一摇与截图补记**：打开单笔账单详情摇一摇，或导入已有截图。
 - **离线识别与商户图标**：提取金额、商户、时间与订单号，自动裁剪商户 Logo 或头像。
 - **退款与账单核对**：记录原付、已退与实付金额，保留截图和识别原文，支持编辑、去重与删除撤销。
-- **账本、预算与统计**：手动记收支、自定义分类、搜索账单，查看月度预算、分类占比与每日收支趋势。
+- **账本、预算与统计**：手动记收支、自定义分类、搜索账单，查看月度预算、分类占比及跨月、跨年收支趋势。
 - **标签与待报销**：给账单添加标签、标记待报销，按日期和条件生成账单汇总，导出 PNG、Excel 或 PDF 与图片材料包。
 - **账户与余额联动**：管理银行卡、微信、支付宝及现金账户；账单关联账户后自动调整余额，支持通用默认账户和微信、支付宝各自的默认账户。
 - **灵动岛与记账结果卡片**：支持的系统可通过灵动岛/实时通知衔接结果卡片，直接选择本笔支出的付款账户、标记是否待报销；其他环境直接显示完整结果卡片。
@@ -46,32 +46,15 @@
 
 ## 版本更新
 
-[0.5.115-offline.1 更新说明](.github/RELEASE_NOTES.md)
+[0.5.116-youshu.1 更新说明](.github/RELEASE_NOTES.md)
 
 ## 界面预览
 
-以下为上游原有功能的**手机实机截图**；点击图片可查看大图。新增离线分析页面另经浏览器自动化验证，尚未完成物理手机验收。
+以下为合成账单的浏览器预览，保留原有薄荷绿、白色界面；不代表物理手机验收结果。
 
-| 首页账本 | 收支统计 | 资产管理 |
-| :---: | :---: | :---: |
-| <img src=".github/screenshots/ledger.jpg" width="250" alt="首页账本与月度预算" /> | <img src=".github/screenshots/statistics.jpg" width="250" alt="分类占比与统计筛选" /> | <img src=".github/screenshots/accounts.jpg" width="250" alt="资产账户与默认账户" /> |
-
-| 账单详情 | 账户明细 | 我的 |
-| :---: | :---: | :---: |
-| <img src=".github/screenshots/bill-detail.jpg" width="250" alt="账单详情、支付账户与待报销标记" /> | <img src=".github/screenshots/account-detail.jpg" width="250" alt="账户余额与收支明细" /> | <img src=".github/screenshots/settings.jpg" width="250" alt="支付自动识别与摇一摇设置" /> |
-
-<details>
-<summary>展开查看默认账户、新建账户和记账结果卡片</summary>
-
-| 微信默认账户 | 添加账户 |
+| 首页账本（320px，大字体） | 统计页（393px） |
 | :---: | :---: |
-| <img src=".github/screenshots/default-account.jpg" width="250" alt="微信专属默认账户选择" /> | <img src=".github/screenshots/add-account.jpg" width="250" alt="添加微信、支付宝、银行卡或现金账户" /> |
-
-| 记账结果卡片 | 记账结果卡片展示 |
-| :---: | :---: |
-| <img src=".github/screenshots/result-card.jpg" width="250" alt="识别结果卡片中的金额、待报销和账户操作" /> | <img src=".github/screenshots/result-card-alternate.jpg" width="250" alt="识别完成后显示的记账结果卡片" /> |
-
-</details>
+| <img src=".github/screenshots/youshu-ledger.png" width="250" alt="可按年和全部时间查看的账本" /> | <img src=".github/screenshots/youshu-statistics.png" width="250" alt="集成收支趋势、分类及时间筛选" /> |
 
 ## 技术实现
 
@@ -105,7 +88,7 @@ V6 Tiny 的检测与识别权重合计约 **5.95 MiB**，V5 mobile 约 **20.37 M
 
 部分微信支付成功页在普通无障碍服务下只返回空根节点，单纯补读取 flags 仍然无效。我们做过同一真机成功页的只读 **A→B→A** 对照：保持诊断逻辑、权限与 flags 相同，仅更换服务完整类名，普通入口的有效采样均为 **1 个空节点**，兼容入口的 8 次采样均读到 **32 个节点**及“支付成功”“完成”，换回后再次为空。
 
-当前使用沿用 `SelectToSpeakService` 完整类名的[兼容入口](app/src/main/java/com/google/android/accessibility/selecttospeak/SelectToSpeakService.kt)，内部继承花有谱自己的识别服务；系统中仍显示“花有谱 · 页面识别”，`isAccessibilityTool=false`。这项适配未引入 Google 代码或系统权限；微信内部判断机制并未公开，对照结果只证明已测环境中的类名差异有效。
+当前使用沿用 `SelectToSpeakService` 完整类名的[兼容入口](app/src/main/java/com/google/android/accessibility/selecttospeak/SelectToSpeakService.kt)，内部继承有数自己的识别服务；系统中仍显示“有数 · 页面识别”，`isAccessibilityTool=false`。这项适配未引入 Google 代码或系统权限；微信内部判断机制并未公开，对照结果只证明已测环境中的类名差异有效。
 
 支付成功页到本地账本的流程为：
 
@@ -117,7 +100,7 @@ V6 Tiny 的检测与识别权重合计约 **5.95 MiB**，V5 mobile 约 **20.37 M
 
 ## 开始使用
 
-1. 从 [最新 Release](https://github.com/AldenHe/huayoupu-ledger/releases/latest) 下载 `arm64-v8a.apk` 并安装，在「我的」开启微信 / 支付宝自动识别或摇一摇，按引导完成授权。
+1. 从 [最新 Release](https://github.com/MisterGaohohoho/huiming-ledger/releases) 下载 `arm64-v8a.apk` 并安装，在「我的」开启微信 / 支付宝自动识别或摇一摇，按引导完成授权。
 2. 在支持的支付成功页完成自动记账；漏记时用摇一摇、截图导入或手动补记。
 3. 回到账本核对记录；换机或卸载前，从「账单与备份」导出完整备份。
 
@@ -129,4 +112,4 @@ V6 Tiny 的检测与识别权重合计约 **5.95 MiB**，V5 mobile 约 **20.37 M
 
 ## 社区交流
 
-[LINUX DO](https://linux.do/) · 真诚、友善、团结、专业。欢迎佬友交流使用体验、反馈问题，一起改进花有谱。
+[LINUX DO](https://linux.do/) · 真诚、友善、团结、专业。欢迎佬友交流使用体验、反馈问题，一起改进有数。

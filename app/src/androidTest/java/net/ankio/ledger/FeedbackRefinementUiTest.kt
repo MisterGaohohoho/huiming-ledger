@@ -96,7 +96,7 @@ class FeedbackRefinementUiTest {
             inst.uiAutomation.executeShellCommand("input tap ${bounds.centerX()} ${bounds.centerY()}").close()
             capture("privacy")
         }
-        val drawable=context.getDrawable(R.drawable.huayoupu_notification_icon)!!
+        val drawable=context.getDrawable(R.drawable.youshu_notification_icon)!!
         val bitmap=android.graphics.Bitmap.createBitmap(128,128,android.graphics.Bitmap.Config.ARGB_8888)
         drawable.setBounds(0,0,128,128);drawable.draw(android.graphics.Canvas(bitmap))
         File(directory,"notification-icon.png").outputStream().use {bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}

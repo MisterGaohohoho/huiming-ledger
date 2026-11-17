@@ -38,6 +38,25 @@ class LedgerWebBridge(private val activity: MainActivity) {
     fun offlineRecords(json: String): String = offlineRead(json, false)
 
     @JavascriptInterface
+    fun unifiedSnapshot(json:String):String=try {
+        require(json.length<=4096)
+        val q=JSONObject(json)
+        synchronized(app.store){
+            val period=q.getString("period");val search=q.optString("search");val direction=q.optString("direction")
+            val channel=q.optString("channel");val reimbursement=q.optString("reimbursement")
+            val revision=app.revision.value.toString()
+            if(q.has("beforeAt") && q.optString("revision")!=revision)JSONObject().put("ok",true).put("reset",true).toString()
+            else {
+                val read=LedgerReadView(app.store)
+                val view=read.records(period,search,direction=direction,channel=channel,reimbursement=reimbursement,
+                    beforeAt=if(q.has("beforeAt"))q.getLong("beforeAt") else null,beforeId=if(q.has("beforeId"))q.getLong("beforeId") else null)
+                view.put("month",period).put("summary",if(q.has("beforeAt"))JSONObject() else read.summary(period,reimbursement,channel))
+                buildSnapshot(view).put("dataRevision",revision).put("viewKey",json+revision).toString()
+            }
+        }
+    }catch(error:Exception){failure(error.message?:"账本读取失败，请重试").toString()}
+
+    @JavascriptInterface
     fun importPlatformBills(platform: String) {
         if (platform in setOf("wechat", "alipay")) activity.runOnUiThread { activity.platformImports.open(platform) }
     }
@@ -252,6 +271,7 @@ class LedgerWebBridge(private val activity: MainActivity) {
             .put("tags",JSONArray(BillTags.encode(record.tags))).put("note",record.note).put("amountCents",record.bill.amountCents?:JSONObject.NULL).put("direction",record.bill.direction?.name?:JSONObject.NULL)
             .put("occurredAt",record.bill.occurredAt).put("state",record.state.name).put("source",record.capture.source.name)
             .put("paymentProvider",paymentProvider(record.capture)?:JSONObject.NULL)
+            .put("importLabel",if(record.capture.text.startsWith("洁账导入："))"洁账导入" else if(record.capture.text.startsWith("账单文件导入："))"账单导入" else "")
             .put("refund",record.bill.refund?.let { JSONObject().put("provider",it.provider).put("originalAmountCents",it.originalAmountCents).put("refundedCents",it.refundedCents).put("mode",it.mode).put("refundId",it.refundId?:JSONObject.NULL) }?:JSONObject.NULL))
             .put("rawText",record.capture.text).put("history",JSONArray().apply {
             app.store.captureHistory(id).forEach { item ->

@@ -42,6 +42,26 @@ class BillReportUiTest {
             ui.await("!recordPanelOpen");assertEquals(listOf("差旅"),app.store.get(row.id)!!.tags)
         } } finally {app.store.delete(row.id);app.changed()}
     }
+    @Test fun integratedStatisticsAndUnifiedImportWorkOnAndroidWebView() {
+        val row=record()
+        try { ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            val ui=WebUiProbe(scenario);ui.ready()
+            ui.await("typeof UnifiedLedger!=='undefined'")
+            ui.run("go('stats');document.querySelector('#stats .month').click();document.querySelector('[data-period-mode=all]').click();document.querySelector('#period-apply').click()")
+            ui.await("month==='all'&&document.querySelector('#integrated-trend canvas')&&document.querySelector('#stats-error').hidden")
+            ui.run("document.querySelector('#stats-type [data-type=all]').click();document.querySelector('#stats-filter').click()")
+            assertEquals("true",ui.value("!document.querySelector('#integrated-totals').hidden && !document.querySelector('#sheet-content').textContent.includes('洁账')"))
+            ui.run("document.querySelector('#scope-channel').value='wechat';document.querySelector('#scope-apply').click()")
+            ui.await("document.querySelector('#stats-scope-note').textContent.includes('微信')")
+            ui.run("go('ledger')")
+            assertEquals("true",ui.value("document.querySelector('#monthly-budget').hidden && !document.querySelector('[data-open-channel]')"))
+            scenario.recreate();ui.ready();ui.await("month==='all'&&LedgerScope.channel==='wechat'")
+            ui.run("go('settings');showDataTools()")
+            assertEquals("true",ui.value("document.querySelector('#import-bills').textContent.includes('洁账')"))
+            ui.run("closeSheet(false);LedgerScope.channel='';month=localMonth(Date.now());refresh();remember()")
+        } } finally {app.store.delete(row.id);app.changed()}
+    }
+
     @Test fun criteriaValidationBothTagModesReceiptSkipAndRestore() {
         val row=record(listOf("项目A","差旅"));val second=record(listOf("项目A"))
         try { ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -83,13 +103,13 @@ class BillReportUiTest {
             ui.await("document.querySelector('#report-status')?.textContent==='1 笔账单已汇总'")
             assertEquals("true",ui.value("document.querySelector('#report-receipt').textContent.includes('需要报销')"))
             assertEquals("true",ui.value("document.querySelector('#sheet').getBoundingClientRect().height>=innerHeight-2"))
-            ui.run("closeSheet(false);go('stats');document.querySelector('#stats-reimbursement [data-reimbursement=\"required\"]').click()")
-            ui.await("document.querySelector('#stats-reimbursement [data-reimbursement=\"required\"]').getAttribute('aria-pressed')==='true'")
+            ui.run("closeSheet(false);go('stats');document.querySelector('#stats-filter').click();document.querySelector('#scope-reimbursement').value='required';document.querySelector('#scope-apply').click()")
+            ui.await("statsReimbursement==='required'&&document.querySelector('#stats-scope-note').textContent.includes('需要报销')")
             val result=org.json.JSONObject(ui.text("LedgerNative.statistics(month,'required')"))
             assertTrue(result.getBoolean("ok"));assertEquals(12345L,result.getJSONObject("summary").getJSONObject("totals").getLong("expense"))
             assertEquals("交通",result.getJSONObject("summary").getJSONArray("categories").getJSONObject(0).getString("name"))
-            ui.run("document.querySelector('#stats-reimbursement [data-reimbursement=\"notRequired\"]').click()")
-            ui.await("document.querySelector('#stats-reimbursement [data-reimbursement=\"notRequired\"]').getAttribute('aria-pressed')==='true'")
+            ui.run("document.querySelector('#stats-filter').click();document.querySelector('#scope-reimbursement').value='notRequired';document.querySelector('#scope-apply').click()")
+            ui.await("statsReimbursement==='notRequired'")
             val records=org.json.JSONObject(ui.text("LedgerNative.statisticsRecords(month,'交通','EXPENSE',0,'notRequired')"))
             assertTrue(records.getBoolean("ok"));assertEquals(1,records.getJSONArray("records").length())
             assertEquals(second.id,records.getJSONArray("records").getJSONObject(0).getLong("id"))
@@ -131,15 +151,15 @@ class BillReportUiTest {
             for(format in listOf("png","pdf","xlsx")) {
                 val collection=if(format=="png")MediaStore.Images.Media.EXTERNAL_CONTENT_URI else MediaStore.Downloads.EXTERNAL_CONTENT_URI
                 val extension=if(format=="pdf")"zip"else format
-                val prefix="花有谱-账单汇总-%-${token.take(8)}.$extension"
+                val prefix="有数-账单汇总-%-${token.take(8)}.$extension"
                 ui.run("document.querySelector('[data-report-export=\"$format\"]').click()")
-                val path=if(format=="png")"相册/花有谱" else "下载/花有谱"
+                val path=if(format=="png")"相册/有数" else "下载/有数"
                 ui.await("document.querySelector('#report-save-status').textContent==='${if(format=="pdf")"PDF 与图片材料包 ZIP"else format.uppercase()} 已保存到$path'")
                 assertEquals("true",ui.value("!!document.querySelector('#report-receipt') && document.querySelector('#sheet').open"))
                 val saved=app.contentResolver.query(collection,arrayOf(MediaStore.MediaColumns._ID,MediaStore.MediaColumns.RELATIVE_PATH,MediaStore.MediaColumns.IS_PENDING),
                     "${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ?",arrayOf(prefix),"${MediaStore.MediaColumns._ID} DESC")!!.use { cursor ->
                     assertTrue("export file not found",cursor.moveToFirst());assertEquals(0,cursor.getInt(2))
-                    assertEquals(if(format=="png")"Pictures/花有谱/" else "Download/花有谱/",cursor.getString(1))
+                    assertEquals(if(format=="png")"Pictures/有数/" else "Download/有数/",cursor.getString(1))
                     android.content.ContentUris.withAppendedId(collection,cursor.getLong(0))
                 }
                 try {

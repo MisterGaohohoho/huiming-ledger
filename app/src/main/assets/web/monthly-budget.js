@@ -6,8 +6,8 @@ window.MonthlyBudget=(()=>{
  function update(value){cents=Number.isSafeInteger(value)&&value>0&&value<=maximum?value:0}
  function render(expense,income,scope=''){
   latest={expense,income,scope};
-  const control=document.getElementById('monthly-budget');control.hidden=income;
-  if(income){stop();return}
+  const control=document.getElementById('monthly-budget');control.hidden=income||!!(window.LedgerScope&&(!LedgerScope.isMonth(scope)||LedgerScope.channel||(typeof statsReimbursement!=='undefined'&&statsReimbursement)));
+  if(control.hidden){stop();return}
   const used=Math.max(0,Number(expense)||0),ratio=cents?used/cents:0,over=used>cents;
   control.classList.toggle('over-budget',!!cents&&over);
   control.classList.toggle('budget-unset',!cents);

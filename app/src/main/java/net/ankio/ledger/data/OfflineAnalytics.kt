@@ -16,24 +16,17 @@ class OfflineAnalytics(private val store: LedgerStore) {
             ELSE 'other' END"""
     }
 
-    private data class Scope(val start: Long, val end: Long, val previous: Long, val year: Boolean,
-                             val channel: String, val reimbursement: String)
+    private data class Scope(val start:Long,val end:Long,val previous:Long,val mode:String,
+                             val channel:String,val reimbursement:String)
 
-    private fun scope(input: JSONObject): Scope {
-        val year = when (input.optString("mode", "month")) {
-            "month" -> false; "year" -> true; else -> error("统计周期无效")
-        }
-        val period = input.getString("period")
-        require(Regex(if (year) "20[0-9]{2}|2100" else "(?:20[0-9]{2}|2100)-(?:0[1-9]|1[0-2])").matches(period)) { "日期范围无效" }
-        val start = LocalDate.parse(if (year) "$period-01-01" else "$period-01")
-        val end = if (year) start.plusYears(1) else start.plusMonths(1)
-        val previous = if (year) start.minusYears(1) else start.minusMonths(1)
-        val channel = input.optString("channel")
-        require(channel in setOf("", "wechat", "alipay", "other")) { "支付渠道无效" }
-        val reimbursement = input.optString("reimbursement")
-        require(reimbursement in setOf("", "required", "notRequired")) { "报销筛选无效" }
-        fun millis(date: LocalDate) = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        return Scope(millis(start), millis(end), millis(previous), year, channel, reimbursement)
+    private fun scope(input:JSONObject):Scope {
+        val period=LedgerPeriod.parse(input.optString("period","all"))
+        require(input.optString("mode",period.mode)==period.mode){"统计周期无效"}
+        val channel=input.optString("channel")
+        require(channel in setOf("","wechat","alipay","other")){"支付渠道无效"}
+        val reimbursement=input.optString("reimbursement")
+        require(reimbursement in setOf("","required","notRequired")){"报销筛选无效"}
+        return Scope(period.start,period.end,period.previous,period.mode,channel,reimbursement)
     }
 
     private val amount get() = ReimbursementStore.statisticalAmountSql()
@@ -62,21 +55,34 @@ class OfflineAnalytics(private val store: LedgerStore) {
         store.readableDatabase.rawQuery("SELECT r.direction,r.category,SUM($amount),COUNT(*) FROM records r WHERE ${where(s)} GROUP BY r.direction,r.category ORDER BY SUM($amount) DESC,r.category",args(s)).use { c ->
             while(c.moveToNext()) categories.put(JSONObject().put("direction",c.getString(0)).put("name",c.getString(1)).put("amount",c.getLong(2)).put("count",c.getInt(3)))
         }
-        val buckets = mutableMapOf<Int,JSONObject>()
-        val date = if(s.year) "%m" else "%d"
-        store.readableDatabase.rawQuery("SELECT strftime('$date',r.occurred_at/1000,'unixepoch','localtime'),r.direction,SUM($amount) FROM records r WHERE ${where(s)} GROUP BY 1,2 ORDER BY 1",args(s)).use { c ->
-            while(c.moveToNext()) {
-                val index=c.getString(0).toInt()
-                buckets.getOrPut(index){JSONObject().put("index",index).put("income",0).put("expense",0)}
-                    .put(if(c.getString(1)=="INCOME")"income" else "expense",c.getLong(2))
-            }
+        fun date(at:Long)=java.time.Instant.ofEpochMilli(at).atZone(ZoneId.systemDefault()).toLocalDate()
+        var first=date(s.start);var last=date(s.end).minusDays(1)
+        if(s.mode=="all")store.readableDatabase.rawQuery("SELECT MIN(r.occurred_at),MAX(r.occurred_at) FROM records r WHERE ${where(s)}",args(s)).use { c ->
+            if(c.moveToFirst() && !c.isNull(0)){first=date(c.getLong(0));last=date(c.getLong(1))}else{first=LocalDate.now();last=first}
         }
-        val count=if(s.year)12 else java.time.Instant.ofEpochMilli(s.start).atZone(ZoneId.systemDefault()).toLocalDate().lengthOfMonth()
+        val span=java.time.temporal.ChronoUnit.DAYS.between(first,last)
+        val unit=when(s.mode){"month"->"day";"year"->"month";else->if(span<=62)"day" else if(span<=1096)"month" else "year"}
+        val pattern=when(unit){"day"->"%Y-%m-%d";"month"->"%Y-%m";else->"%Y"}
+        val buckets=mutableMapOf<String,JSONObject>()
+        store.readableDatabase.rawQuery("SELECT strftime('$pattern',r.occurred_at/1000,'unixepoch','localtime'),r.direction,SUM($amount) FROM records r WHERE ${where(s)} GROUP BY 1,2 ORDER BY 1",args(s)).use { c ->
+            while(c.moveToNext())buckets.getOrPut(c.getString(0)){JSONObject().put("income",0).put("expense",0)}
+                .put(if(c.getString(1)=="INCOME")"income" else "expense",c.getLong(2))
+        }
+        var cursor=when(unit){"month"->first.withDayOfMonth(1);"year"->first.withDayOfYear(1);else->first}
         val trend=JSONArray()
-        for(index in 1..count) trend.put(buckets[index]?:JSONObject().put("index",index).put("income",0).put("expense",0))
+        while(cursor<=last){
+            val key=when(unit){"day"->cursor.toString();"month"->cursor.toString().take(7);else->cursor.year.toString()}
+            val next=when(unit){"day"->cursor.plusDays(1);"month"->cursor.plusMonths(1);else->cursor.plusYears(1)}
+            val from=maxOf(cursor,date(s.start));val through=minOf(next.minusDays(1),date(s.end).minusDays(1))
+            trend.put((buckets[key]?:JSONObject().put("income",0).put("expense",0)).put("index",trend.length()+1)
+                .put("label",if(s.mode=="month")"${cursor.dayOfMonth}日" else if(s.mode=="year")"${cursor.monthValue}月" else key)
+                .put("period","$from..$through"))
+            cursor=next
+        }
         val top=details(JSONObject(input.toString()).put("direction","EXPENSE").put("sort","amount").put("limit",10)).getJSONArray("records")
         return JSONObject().put("ok",true).put("totals",totals(s.start,s.end)).put("previous",totals(s.previous,s.start))
-            .put("categories",categories).put("trend",trend).put("top",top).put("period",input.getString("period"))
+            .put("categories",categories).put("trend",trend).put("trendUnit",unit).put("top",top).put("period",input.optString("period","all"))
+            .put("comparable",s.mode in setOf("month","year"))
     }
 
     fun details(input: JSONObject): JSONObject {

@@ -2,7 +2,7 @@
 
 自 2026-10-31 起，本项目代码以 **GPL-3.0-only** 开源，全文见 [LICENSE](LICENSE)。范围包括本项目有权许可的应用、核心逻辑、测试、脚本及文档。第三方文件保留原有许可和署名，不将基础库、识别模型或商标声明为自研或独占所有。
 
-历史 GPL 授权保持有效。0.5.62 起曾使用的限制性声明属于历史状态，不限制当前 GPL 授权。项目曾使用「知余记账」「慧铭记账」名称，并曾预览「账小伴」品牌，自 2026-11-04 起正式更名为「花有谱」；改名不改变既有许可、作者署名和用户数据格式。
+历史 GPL 授权保持有效。0.5.62 起曾使用的限制性声明属于历史状态，不限制当前 GPL 授权。项目曾使用「知余记账」「慧铭记账」名称，并曾预览「账小伴」品牌，自 2026-11-04 起正式更名为「花有谱」；本 Fork 于 2026-11-17 更名为「有数」。改名不改变既有许可、作者署名和用户数据格式。
 
 ## 历史参考记录
 
@@ -21,7 +21,7 @@
 | Font Awesome Free 6.5.2 | CSS 与字体图标 | CSS MIT；woff2 字体 SIL OFL 1.1；SVG/JS 图标 CC BY 4.0 |
 | Apache ECharts 5.6.0 | 离线账单图表 | Apache-2.0；完整 LICENSE / NOTICE 位于 `app/src/main/assets/web/vendor/` |
 
-本 Fork 的月报、年报与支付平台分析参考并适配自 [MisterGaohohoho/Personal-Bill](https://github.com/MisterGaohohoho/Personal-Bill)（MIT）。保留完整 `Personal-Bill-LICENSE.txt`；统计查询、导入与记账联动改为花有谱原生 SQLite 实现，交互适配到 APK WebView。第三方声明和 ECharts 固定哈希随源码及应用内许可页提供。适配范围见 [.github/OFFLINE_BILLS.md](.github/OFFLINE_BILLS.md)。
+本 Fork 的月报、年报与支付平台分析参考并适配自 [MisterGaohohoho/Personal-Bill](https://github.com/MisterGaohohoho/Personal-Bill)（MIT）。保留完整 `Personal-Bill-LICENSE.txt`；统计查询、导入与记账联动改为有数原生 SQLite 实现，交互适配到 APK WebView。第三方声明和 ECharts 固定哈希随源码及应用内许可页提供。适配范围见 [.github/OFFLINE_BILLS.md](.github/OFFLINE_BILLS.md)。
 
 当前 V6 不打包 ML Kit。随包 Maven 目录按实际运行坐标过滤，不能将旧 ML Kit 的“65 个组件”作为 V6 数量。生成清单包含坐标、SHA-256 和原文链接，可在“关于 → 许可与第三方声明”离线查看。ONNX 汇总通知也覆盖本精简构建未启用的模块，不以通知出现与否推断实际链接结果。
 
@@ -44,7 +44,7 @@ Gradle Wrapper 使用 Apache-2.0；Release 网页构建工具 javascript-obfusca
 - Font Awesome 来自 [FortAwesome/Font-Awesome 6.5.2](https://github.com/FortAwesome/Font-Awesome/tree/6.5.2)，完整许可在 `app/src/main/assets/web/vendor/LICENSE.txt`，不删除署名。
 - 五家银行标识来自官网，仅用于识别账户类型，权利属于各银行，不表示服务关系或背书。来源见下方“银行图标来源”。GPL 不授予银行商标权，也不替代标识使用所需授权。
 - 微信、支付宝账户图标来自各自官网发布的原始图像，仅用于识别账户类别，未重绘。来源和机械适配见下方“支付品牌图标来源”；商标权属于相应权利人，GPL 不包含商标授权。
-- 花有谱启动图标采用 2026-11-04 通过 toImage 配置的备用服务、gpt-image-2.5 模型生成的“账页开花”素材；项目完成透明前景、Android 自适应与单色资源适配。原图、最终提示词和适配说明见 `.github/branding/`。历史“慧铭”启动图标曾使用 qwen-image-3.0 生成素材，现已替换。源码许可不提供第三方品牌背书或商标许可。
+- 有数应用图标采用本 Fork 新绘制的几何账页、三行账目与对勾，未使用第三方品牌素材；采用项目 GPL-3.0-only 许可。图标与 Android 自适应、单色资源说明见 `.github/branding/`。上游旧启动图标保留在 Git 历史中，当前 APK 已替换。源码许可不提供第三方品牌背书或商标许可。
 - 视觉参考为用户提供的 HTML ZIP，来源与摘要见下方“视觉参考来源”。原型原件没有独立开源许可，公共源码导出排除其原始 HTML、CSS 和归档；来源记录保留，不将第三方参考改标为 GPL。
 
 分发者需核对实际版本中的依赖与素材范围，同时提供对应源码、构建说明和许可原文。
@@ -72,7 +72,7 @@ Gradle Wrapper 使用 Apache-2.0；Release 网页构建工具 javascript-obfusca
 | 微信 | https://www.wechat.com/en/ | https://newres.wechat.com/t/fed_upload/08b92997-2415-408f-b706-442ed4ede518/OTE0YTAw.png |
 | 支付宝 | https://www.alipay.com/ | https://mdn.alipayobjects.com/rms/afts/file/A*7EyORZxdNDkAAAAAAAAAAAAAARQnAQ |
 
-微信使用官网 `apple-touch-icon-precomposed` 的180×180原图；支付宝使用官网 `shortcut icon` 引用的透明PNG，只裁去透明空白、方画布居中并等比缩至180×180，保留原图配色和轮廓。打包文件位于 `app/src/main/assets/web/payment-brands/`，随包来源说明见同目录 `SOURCE.txt`。这些图标不表示花有谱与微信、支付宝存在合作、官方认证或账户连接。
+微信使用官网 `apple-touch-icon-precomposed` 的180×180原图；支付宝使用官网 `shortcut icon` 引用的透明PNG，只裁去透明空白、方画布居中并等比缩至180×180，保留原图配色和轮廓。打包文件位于 `app/src/main/assets/web/payment-brands/`，随包来源说明见同目录 `SOURCE.txt`。这些图标不表示有数与微信、支付宝存在合作、官方认证或账户连接。
 
 账户方标 `alipay-square.png` 来自支付宝官方下载页 `https://mobile.alipay.com/index.htm` 所链接的 Android 安装包：`wallet_103608100_client_release_202303081916_64.apk` 的 `res/drawable-xxxhdpi-v4/appicon.png`。保留192×192原始图像，仅补充来源元数据；完整下载链接见随包 `SOURCE.txt`。
 

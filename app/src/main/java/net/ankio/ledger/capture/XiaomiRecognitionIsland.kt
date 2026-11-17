@@ -35,7 +35,7 @@ internal object XiaomiRecognitionIsland {
             putString("miui.focus.param",JSONObject().put("param_v2",params).toString())
             // Pass the full background app icon. No mask, circular crop or redraw.
             putBundle("miui.focus.pics",Bundle().apply {
-                putParcelable(PICTURE,Icon.createWithResource(context,R.drawable.huayoupu_notification_icon))
+                putParcelable(PICTURE,Icon.createWithResource(context,R.drawable.youshu_notification_icon))
             })
         }
     }
