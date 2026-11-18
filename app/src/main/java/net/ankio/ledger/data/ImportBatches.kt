@@ -29,9 +29,10 @@ class ImportBatches(private val store: LedgerStore) {
         db.insertOrThrow("import_batches", null, ContentValues().apply {
             put("uid", uid); put("imported_at", metadata.getLong("importedAt")); put("metadata", metadata.toString())
         })
+        val ids=rows.associate { it.uid to it.id }
         created.forEach { (recordUid, fingerprint) ->
             db.insertOrThrow("import_batch_items", null, ContentValues().apply {
-                put("batch_uid", uid); put("record_uid", recordUid); put("fingerprint", fingerprint)
+                put("batch_uid", uid); put("record_uid", recordUid); put("record_id", ids.getValue(recordUid)); put("fingerprint", fingerprint)
             })
         }
         return uid
@@ -52,7 +53,7 @@ class ImportBatches(private val store: LedgerStore) {
         require(offset in 0..1_000_000)
         val metadata = metadata(uid)
         val rows = JSONArray()
-        store.readableDatabase.rawQuery("SELECT r.id,r.merchant,r.amount,r.direction,r.occurred_at,r.state FROM records r JOIN import_batch_items i ON i.record_uid=r.uid WHERE i.batch_uid=? AND $ACTIVE ORDER BY r.occurred_at DESC,r.id DESC LIMIT 101 OFFSET ?", arrayOf(uid, offset.toString())).use { c ->
+        store.readableDatabase.rawQuery("SELECT r.id,r.merchant,r.amount,r.direction,r.occurred_at,r.state FROM records r JOIN import_batch_items i ON i.record_uid=r.uid AND i.record_id=r.id WHERE i.batch_uid=? AND $ACTIVE ORDER BY r.occurred_at DESC,r.id DESC LIMIT 101 OFFSET ?", arrayOf(uid, offset.toString())).use { c ->
             while (c.moveToNext()) rows.put(JSONObject().put("id", c.getLong(0)).put("merchant", c.getString(1))
                 .put("amount", if(c.isNull(2)) 0L else c.getLong(2)).put("direction", c.getString(3))
                 .put("at", c.getLong(4)).put("state", c.getString(5)))
@@ -71,7 +72,7 @@ class ImportBatches(private val store: LedgerStore) {
 
     private fun summary(metadata: JSONObject): JSONObject {
         val uid = metadata.getString("uid")
-        store.readableDatabase.rawQuery("SELECT COUNT(*),COALESCE(SUM(CASE WHEN r.direction='INCOME' THEN r.amount ELSE 0 END),0),COALESCE(SUM(CASE WHEN r.direction='EXPENSE' THEN r.amount ELSE 0 END),0) FROM records r JOIN import_batch_items i ON i.record_uid=r.uid WHERE i.batch_uid=? AND $ACTIVE", arrayOf(uid)).use {
+        store.readableDatabase.rawQuery("SELECT COUNT(*),COALESCE(SUM(CASE WHEN r.direction='INCOME' THEN r.amount ELSE 0 END),0),COALESCE(SUM(CASE WHEN r.direction='EXPENSE' THEN r.amount ELSE 0 END),0) FROM records r JOIN import_batch_items i ON i.record_uid=r.uid AND i.record_id=r.id WHERE i.batch_uid=? AND $ACTIVE", arrayOf(uid)).use {
             it.moveToFirst(); metadata.put("remaining", it.getInt(0)).put("income", it.getLong(1)).put("expense", it.getLong(2))
         }
         return metadata
@@ -79,7 +80,7 @@ class ImportBatches(private val store: LedgerStore) {
 
     fun editedCount(uid: String): Int {
         val saved = mutableMapOf<String, String>()
-        store.readableDatabase.rawQuery("SELECT i.record_uid,i.fingerprint FROM import_batch_items i JOIN records r ON r.uid=i.record_uid WHERE i.batch_uid=? AND $ACTIVE", arrayOf(uid)).use {
+        store.readableDatabase.rawQuery("SELECT i.record_uid,i.fingerprint FROM import_batch_items i JOIN records r ON r.uid=i.record_uid AND r.id=i.record_id WHERE i.batch_uid=? AND $ACTIVE", arrayOf(uid)).use {
             while(it.moveToNext()) saved[it.getString(0)] = it.getString(1)
         }
         val current = snapshots(store.readableDatabase)
@@ -91,7 +92,7 @@ class ImportBatches(private val store: LedgerStore) {
         store.readableDatabase.rawQuery("SELECT uid,metadata FROM import_batches ORDER BY imported_at,uid", null).use { c ->
             while(c.moveToNext()) {
                 val items = JSONArray()
-                store.readableDatabase.rawQuery("SELECT i.record_uid,i.fingerprint FROM import_batch_items i JOIN records r ON r.uid=i.record_uid WHERE i.batch_uid=? AND $ACTIVE", arrayOf(c.getString(0))).use {
+                store.readableDatabase.rawQuery("SELECT i.record_uid,i.fingerprint FROM import_batch_items i JOIN records r ON r.uid=i.record_uid AND r.id=i.record_id WHERE i.batch_uid=? AND $ACTIVE", arrayOf(c.getString(0))).use {
                     while(it.moveToNext()) items.put(JSONObject().put("recordUid", it.getString(0)).put("fingerprint", it.getString(1)))
                 }
                 result.put(JSONObject(c.getString(1)).put("items", items))
@@ -104,6 +105,7 @@ class ImportBatches(private val store: LedgerStore) {
     fun restore(batches: JSONArray, newlyRestored: Set<String>) {
         val db = store.writableDatabase
         check(db.inTransaction())
+        val restoredIds=store.activeRecordIdsByUid()
         for(index in 0 until batches.length()) {
             val batch = JSONObject(batches.getJSONObject(index).toString())
             val items = batch.getJSONArray("items"); batch.remove("items")
@@ -115,7 +117,7 @@ class ImportBatches(private val store: LedgerStore) {
                 val item = items.getJSONObject(i)
                 if(item.getString("recordUid") !in newlyRestored) continue
                 db.insertWithOnConflict("import_batch_items", null, ContentValues().apply {
-                    put("batch_uid", uid); put("record_uid", item.getString("recordUid")); put("fingerprint", item.getString("fingerprint"))
+                    put("batch_uid", uid); put("record_uid", item.getString("recordUid")); put("record_id", restoredIds.getValue(item.getString("recordUid"))); put("fingerprint", item.getString("fingerprint"))
                 }, SQLiteDatabase.CONFLICT_IGNORE)
             }
         }
@@ -125,7 +127,7 @@ class ImportBatches(private val store: LedgerStore) {
         const val ACTIVE = "r.state IN ('POSTED','REVIEW') AND NOT EXISTS(SELECT 1 FROM record_deletions d WHERE d.record_id=r.id)"
         fun create(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE IF NOT EXISTS import_batches(uid TEXT PRIMARY KEY NOT NULL,imported_at INTEGER NOT NULL,metadata TEXT NOT NULL)")
-            db.execSQL("CREATE TABLE IF NOT EXISTS import_batch_items(batch_uid TEXT NOT NULL,record_uid TEXT PRIMARY KEY NOT NULL,fingerprint TEXT NOT NULL)")
+            db.execSQL("CREATE TABLE IF NOT EXISTS import_batch_items(batch_uid TEXT NOT NULL,record_uid TEXT NOT NULL,record_id INTEGER NOT NULL UNIQUE,fingerprint TEXT NOT NULL,PRIMARY KEY(batch_uid,record_uid))")
             db.execSQL("CREATE INDEX IF NOT EXISTS import_items_batch ON import_batch_items(batch_uid)")
         }
         private fun snapshots(db: SQLiteDatabase): Map<String, String> = db.rawQuery("SELECT uid,amount,direction,merchant,category,occurred_at,note,account_uid,tags,requires_reimbursement,state,transaction_id,raw_text FROM records", null).use { c ->
@@ -144,7 +146,7 @@ class ImportBatches(private val store: LedgerStore) {
                 require(b.getString("fileName").length in 1..255 && b.getString("source").length in 1..40)
                 for(key in listOf("importedAt", "from", "through", "created", "review", "updated", "duplicates", "invalid")) {
                     val value = b.get(key); require(value is Int || value is Long)
-                    require((value as Number).toLong() in 0..4_133_980_800_000L)
+                    require((value as Number).toLong() in 0..if(key in setOf("importedAt","from","through"))4_133_980_800_000L else 100_000L)
                 }
                 require(b.getLong("importedAt") > 0 && b.getLong("from") <= b.getLong("through"))
                 require(b.getLong("review") <= b.getLong("created"))

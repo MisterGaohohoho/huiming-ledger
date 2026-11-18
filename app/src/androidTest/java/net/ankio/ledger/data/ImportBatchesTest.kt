@@ -56,6 +56,19 @@ class ImportBatchesTest {
         assertEquals(0,ImportBatches(store).list(0).getJSONArray("items").length())
     }
 
+    @Test fun reimportAfterPermanentDeletionBelongsOnlyToTheNewBatch(){
+        val store=store();val row=record(1)
+        LedgerCsvImport.apply(store,csv(listOf(row)),"旧批次.csv");val old=batch(store)
+        val manager=LedgerBatchDeletion(store);manager.commit(manager.preview(selection(old)).getString("token"))
+        store.purgeExpiredDeletes(Long.MAX_VALUE)
+        LedgerCsvImport.apply(store,csv(listOf(row)),"重新导入.csv")
+        assertEquals(1,store.all().size)
+        assertEquals(0,manager.preview(selection(old)).getInt("count"))
+        val items=ImportBatches(store).list(0).getJSONArray("items")
+        val latest=(0 until items.length()).map { items.getJSONObject(it) }.first { it.getString("fileName")=="重新导入.csv" }
+        assertEquals(1,manager.preview(selection(latest.getString("uid"))).getInt("count"))
+    }
+
     @Test fun platformRefundUpdatesExistingBillWithoutTransferringItsOwnership(){
         val store=store()
         val original=record(1).copy(capture=Capture(Source.OCR,PaymentApps.WECHAT,"合成原付款",at))

@@ -39,7 +39,7 @@ class LedgerBatchDeletion(private val store:LedgerStore) {
         val batch=q.optString("importBatch")
         val (where,args)=if(batch.isNotEmpty()) {
             ImportBatches(store).metadata(batch)
-            "EXISTS(SELECT 1 FROM import_batch_items i WHERE i.record_uid=r.uid AND i.batch_uid=?) AND ${ImportBatches.ACTIVE}" to listOf(batch)
+            "EXISTS(SELECT 1 FROM import_batch_items i WHERE i.record_uid=r.uid AND i.record_id=r.id AND i.batch_uid=?) AND ${ImportBatches.ACTIVE}" to listOf(batch)
         } else LedgerReadView(store).matchingWhere(q.getString("period"),q.optString("search"),q.optString("direction"),
             reimbursement=q.optString("reimbursement"),channel=q.optString("channel"))
         require(q.get("all") is Boolean) { "选择方式无效" }
