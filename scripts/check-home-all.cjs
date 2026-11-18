@@ -29,7 +29,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
   await page.locator('#selection-delete').click();assert.match(await page.locator('.batch-scope').textContent(),/收支/);
   await page.locator('#batch-cancel').click();await page.locator('#selection-cancel').click();
   for(const large of [false,true]){
-   await page.evaluate(large=>{LedgerUI.event('fontScale',large?1.5:1);ledgerView.summary.totals.income=98765432100;ledgerView.summary.totals.expense=12345678900;render();document.querySelector('#ledger').scrollTop=0},large);
+   await page.evaluate(large=>{LedgerUI.event('fontScale',large?1.5:1);ledgerView.summary.totals.income=98765432100;ledgerView.summary.totals.expense=12345678900;render();document.querySelector('#ledger').scrollTop=0;if(large){const sizes=[...document.querySelectorAll('#ledger *')].map(e=>[e,parseFloat(getComputedStyle(e).fontSize)]);sizes.forEach(([e,size])=>e.style.fontSize=(size*1.5)+'px')}},large);
    const metrics=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>innerWidth,controls:[...document.querySelectorAll('#month,.filter,.balance,#home-combined dd')].map(e=>{const r=e.getBoundingClientRect();return {left:r.left,right:r.right,width:r.width,scroll:e.scrollWidth,client:e.clientWidth}})}));
    assert.equal(metrics.overflow,false);assert(metrics.controls.every(r=>r.left>=0&&r.right<=width&&r.width>0&&r.scroll<=r.client+1),JSON.stringify(metrics));
    if(process.env.UI_SCREENSHOTS)await page.screenshot({path:path.join(process.env.UI_SCREENSHOTS,`home-all-${width}-${large?'large':'normal'}.png`)});
