@@ -15,7 +15,12 @@ class LedgerBatchDeletion(private val store:LedgerStore) {
         JSONObject().put("ok",true).put("token",next.token).put("count",rows.size)
             .put("income",rows.filter { it.direction=="INCOME" }.sumOf { it.amount })
             .put("expense",rows.filter { it.direction!="INCOME" }.sumOf { it.amount })
-            .put("reviewCount",rows.count { it.state=="REVIEW" })
+            .put("reviewCount",rows.count { it.state=="REVIEW" }).also { result ->
+                JSONObject(request).optString("importBatch").takeIf { it.isNotEmpty() }?.let { uid ->
+                    val batches=ImportBatches(store)
+                    result.put("batch",batches.metadata(uid)).put("editedCount",batches.editedCount(uid))
+                }
+            }
     }
 
     fun commit(token:String,now:Long=System.currentTimeMillis()):DeletedRecord = synchronized(store) {
@@ -31,7 +36,11 @@ class LedgerBatchDeletion(private val store:LedgerStore) {
     private fun select(request:String):List<Row> {
         require(request.length<=1_048_576) { "选择范围过大" }
         val q=JSONObject(request)
-        val (where,args)=LedgerReadView(store).matchingWhere(q.getString("period"),q.optString("search"),q.optString("direction"),
+        val batch=q.optString("importBatch")
+        val (where,args)=if(batch.isNotEmpty()) {
+            ImportBatches(store).metadata(batch)
+            "EXISTS(SELECT 1 FROM import_batch_items i WHERE i.record_uid=r.uid AND i.record_id=r.id AND i.batch_uid=?) AND ${ImportBatches.ACTIVE}" to listOf(batch)
+        } else LedgerReadView(store).matchingWhere(q.getString("period"),q.optString("search"),q.optString("direction"),
             reimbursement=q.optString("reimbursement"),channel=q.optString("channel"))
         require(q.get("all") is Boolean) { "选择方式无效" }
         val all=q.getBoolean("all");val array=q.getJSONArray(if(all)"excluded" else "ids")

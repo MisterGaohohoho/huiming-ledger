@@ -336,7 +336,7 @@ class MainActivity : Activity() {
     }
     fun importBills() = platformImports.open("auto")
 
-    internal fun previewBills(document:LedgerCsvImport.Document,preview:LedgerCsvImport.Preview) {
+    internal fun previewBills(document:LedgerCsvImport.Document,preview:LedgerCsvImport.Preview,fileName:String="账单文件") {
         if(isDestroyed || isFinishing)return
         csvPreviewSheet?.dismiss()
         val sheet=MintDialog(this,"导入账单预览",preview.format)
@@ -356,7 +356,7 @@ class MainActivity : Activity() {
             uiScope.launch {
                 dispatch("fileOperation",JSONObject.quote("正在导入账单"))
                 try {
-                    val result=withContext(Dispatchers.IO) { ensureActive();LedgerCsvImport.apply(ledger.store,document) }
+                    val result=withContext(Dispatchers.IO) { ensureActive();LedgerCsvImport.apply(ledger.store,document,fileName) }
                     ledger.changed();message("已导入 ${result.imported} 笔，跳过 ${result.duplicates+result.invalid} 笔")
                 } catch(cancelled:CancellationException) { throw cancelled }
                 catch(_:Exception) { message("导入失败，账单未修改") }
@@ -547,7 +547,7 @@ class MainActivity : Activity() {
         if(modelPage!=null)return
         val sheet=MintDialog(this,"数据与隐私","截图与账本保存在本机")
         sheet.content.addView(sheet.text("识别在本机完成，截图不上传。\n\n只检查已授权的交易页面，不读取短信或其他应用通知，不代你操作付款。\n\n自动识别与摇一摇可分别暂停。\n\n卸载或清除数据会删除账本，请先导出备份。",14,MintDialog.INK).apply { setPadding(0,0,0,sheet.dp(14)) })
-        val privacyDetails=sheet.text("账单、账户、分类、备注及新增、修改、删除操作均在本机完成和保存。应用不自动同步完整账本。卸载或清除应用数据会删除本机账本，请主动导出备份。\n\n自动记账、摇一摇和截图导入均在本机识别，无需配置，截图不上传。主动摇动手机或选择图片时取图识别；另外同意并开启支付自动识别后，只会检查你主动选择的应用中的前台付款成功页，先从可读取的节点确认付款成功和单笔金额，再核对当前页面后截图识别。出现输入框、密码或验证提示，或无法确认页面时直接跳过，不用截图来猜测是否成功。摇一摇也不能绕过这层检查。仅自动记录支出，不等待对方确认收款；收入请手动记账、导入截图或主动摇一摇记录。识别成功后直接记账，可在详情中编辑或删除。不会代你点击、收款或支付。识别开始即保存本地任务；识别中、成功、失败均可查看。识别截图会压缩后保存在应用私有目录，用于详情核对。账单与任务共享同一张图片。已关联账单的付款及退款截图随识别历史保留，按第 1 次、第 2 次顺序核对。未关联的成功任务截图默认保留30天，失败截图7天，并按${ScreenshotStore.MAX_BYTES / (1024 * 1024)}MiB容量预算清理；仍被账单历史或待识别任务引用的图片继续保留。清理截图不删除账单、识别历史和商户图标，缺失图片会明确提示。删除最后一个引用后释放图片。完整 ZIP 备份包含账单、识别历史、截图、商户图标、账户及分类，相同图片只保存一次；支持恢复旧版 JSON。账单 CSV 可导出全部月份的已入账收支，通用格式保留商户与订单号，也提供钱迹官方模板格式。失败识别任务不作为账单导出，也不进入完整备份。\n\n此版本不再读取短信和其他应用通知。没有显示前台结果页的后台代扣可能漏记，可打开交易详情后摇一摇补录。暂停自动识别与关闭摇一摇分别生效；撤销无障碍授权会同时停止两种截图功能。",14,MintDialog.MUTED).apply { visibility=View.GONE }
+        val privacyDetails=sheet.text("账单、账户、分类、备注及新增、修改、删除操作均在本机完成和保存。应用不自动同步完整账本。卸载或清除应用数据会删除本机账本，请主动导出备份。\n\n自动记账、摇一摇和截图导入均在本机识别，无需配置，截图不上传。主动摇动手机或选择图片时取图识别；另外同意并开启支付自动识别后，只会检查你主动选择的应用中的前台付款成功页，先从可读取的节点确认付款成功和单笔金额，再核对当前页面后截图识别。出现输入框、密码或验证提示，或无法确认页面时直接跳过，不用截图来猜测是否成功。摇一摇也不能绕过这层检查。仅自动记录支出，不等待对方确认收款；收入请手动记账、导入截图或主动摇一摇记录。识别成功后直接记账，可在详情中编辑或删除。不会代你点击、收款或支付。识别开始即保存本地任务；识别中、成功、失败均可查看。识别截图会压缩后保存在应用私有目录，用于详情核对。账单与任务共享同一张图片。已关联账单的付款及退款截图随识别历史保留，按第 1 次、第 2 次顺序核对。未关联的成功任务截图默认保留30天，失败截图7天，并按${ledger.screenshots.limitBytes() / (1024 * 1024)}MiB容量预算清理；超限时也会清理旧账单的截图；正在识别、排队或处于删除撤销期的截图暂时保留。可在“我的 → 截图管理”调整上限。清理截图不删除账单、识别历史和商户图标，缺失图片会明确提示。删除最后一个引用后释放图片。完整 ZIP 备份包含账单、识别历史、截图、商户图标、账户及分类，相同图片只保存一次；支持恢复旧版 JSON。账单 CSV 可导出全部月份的已入账收支，通用格式保留商户与订单号，也提供钱迹官方模板格式。失败识别任务不作为账单导出，也不进入完整备份。\n\n此版本不再读取短信和其他应用通知。没有显示前台结果页的后台代扣可能漏记，可打开交易详情后摇一摇补录。暂停自动识别与关闭摇一摇分别生效；撤销无障碍授权会同时停止两种截图功能。",14,MintDialog.MUTED).apply { visibility=View.GONE }
         sheet.content.addView(sheet.button("查看完整说明").apply {
             setOnClickListener {
                 val expanded=privacyDetails.visibility!=View.VISIBLE

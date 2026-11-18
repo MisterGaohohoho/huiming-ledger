@@ -13,7 +13,7 @@ data class ValidatedBackup(val records: List<LedgerRecord>, val channels: Map<Ch
     val histories:Map<String,List<RestoredCaptureHistory>> = emptyMap(),
     val reimbursement: JSONObject? = null, val defaultAccountUid:String? = null,
     val channelDefaultAccounts:Map<String,String> = emptyMap(),
-    val transfers:List<AccountTransfer> = emptyList())
+    val transfers:List<AccountTransfer> = emptyList(), val importBatches:JSONArray = JSONArray())
 
 object LedgerBackup {
     const val MAX_BYTES = 16 * 1024 * 1024
@@ -71,6 +71,7 @@ object LedgerBackup {
             if(entries.length()>0)histories.put(record.uid,entries)
         }
         root.put("histories",histories)
+        root.put("importBatches",ImportBatches(store).backup())
         val reimbursement=ReimbursementStore(store.reimbursementContext,store).backupMetadata()
         require(reimbursement.getJSONArray("attachments").length()==0) { "报销原件请使用完整 ZIP 备份" }
         root.put("reimbursement",reimbursement)
@@ -83,6 +84,7 @@ object LedgerBackup {
     }):Int=synchronized(store) {
         validateChannelDefaults(backup.channelDefaultAccounts,backup.accounts)
         val old=store.activeRecordIdsByUid()
+        val priorUids=ImportBatches(store).before().keys
         val hadAccounts=store.accounts().isNotEmpty()
         val db=store.writableDatabase
         val createdOriginals=mutableListOf<java.io.File>()
@@ -96,6 +98,7 @@ object LedgerBackup {
             }
             for((uid,id) in store.activeRecordIdsByUid())if(uid !in old)restoreMedia(requireNotNull(store.get(id)))
             backup.reimbursement?.let { ReimbursementStore(store.reimbursementContext,store).restoreMetadata(it,originalFiles,createdOriginals) }
+            ImportBatches(store).restore(backup.importBatches,store.activeRecordIdsByUid().keys-priorUids)
             ReimbursementStore.validateStoredRelationships(db)
             db.setTransactionSuccessful();successful=true;count
         } catch(error:Throwable) {
@@ -164,7 +167,7 @@ object LedgerBackup {
                 .put("fromEffect",AccountTransfers.effect(from.type,value.amountCents,true))
                 .put("toEffect",AccountTransfers.effect(to.type,value.amountCents,false)))
         }
-        return JSONObject().put("format", "simple-ledger").put("version", 8)
+        return JSONObject().put("format", "simple-ledger").put("version", 9)
             .put("channels", settings).put("records", array).put("accounts", accountArray)
             .put("customCategories", custom).put("defaultAccountUid",defaultAccountUid?:JSONObject.NULL)
             .put("channelDefaultAccounts",JSONObject(channelDefaultAccounts)).put("transfers",transferArray).toString(2)
@@ -193,7 +196,7 @@ object LedgerBackup {
     /** Reuse the legacy schema validation for ZIP metadata, whose image bytes live separately. */
     internal fun decodeMetadata(root: JSONObject): ValidatedBackup {
         val version = root.get("version")
-        require(root.get("format") == "simple-ledger" && version is Int && version in 1..8) { "备份格式或版本不支持" }
+        require(root.get("format") == "simple-ledger" && version is Int && version in 1..9) { "备份格式或版本不支持" }
         val array = root.getJSONArray("records")
         require(array.length() <= 100_000) { "备份记录过多" }
         val uids = mutableSetOf<String>()
@@ -340,6 +343,7 @@ object LedgerBackup {
             }
         }
         val reimbursement=if(root.has("reimbursement"))ReimbursementStore.validateBackup(root.getJSONObject("reimbursement"),records) else null
-        return ValidatedBackup(records, channels, accounts, categories,histories,reimbursement,defaultAccountUid,channelDefaultAccounts,transfers)
+        return ValidatedBackup(records, channels, accounts, categories,histories,reimbursement,defaultAccountUid,channelDefaultAccounts,transfers,
+            if(root.has("importBatches"))ImportBatches.validate(root.getJSONArray("importBatches"),records) else JSONArray())
     }
 }

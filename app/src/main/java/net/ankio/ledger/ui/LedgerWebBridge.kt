@@ -33,6 +33,28 @@ class LedgerWebBridge(private val activity: MainActivity) {
     private val batchDeletion by lazy { net.ankio.ledger.data.LedgerBatchDeletion(app.store) }
 
     @JavascriptInterface
+    fun importHistory(offset:Int):String=try { net.ankio.ledger.data.ImportBatches(app.store).list(offset).toString() }
+        catch(_:Exception){failure("无法读取导入记录").toString()}
+
+    @JavascriptInterface
+    fun importBatchDetail(uid:String,offset:Int):String=try { net.ankio.ledger.data.ImportBatches(app.store).detail(uid,offset).toString() }
+        catch(_:Exception){failure("无法读取本次导入账单").toString()}
+
+    @JavascriptInterface
+    fun screenshotStorageInfo():String=try { app.screenshots.stats().put("ok",true).toString() }
+        catch(_:Exception){failure("无法读取截图存储").toString()}
+
+    @JavascriptInterface
+    fun previewScreenshotLimit(mebibytes:Int):String=try { app.screenshots.previewLimit(mebibytes).toString() }
+        catch(error:Exception){failure(error.message?:"无法预览清理范围").toString()}
+
+    @JavascriptInterface
+    fun applyScreenshotLimit(token:String):String=try {
+        val result=app.screenshots.applyLimit(token);app.changed()
+        JSONObject().put("ok",true).put("storage",result).toString()
+    }catch(error:Exception){failure(error.message?:"无法更新截图设置").toString()}
+
+    @JavascriptInterface
     fun offlineSummary(json: String): String = offlineRead(json, true)
 
     @JavascriptInterface

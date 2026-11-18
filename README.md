@@ -12,7 +12,7 @@
 
 <p align="center"><a href="https://github.com/MisterGaohohoho/youshu-ledger/releases">下载本 Fork APK</a> · <a href="https://github.com/MisterGaohohoho/youshu-ledger/actions/workflows/android.yml">构建与测试</a></p>
 
-本 Fork 基于 [AldenHe/huayoupu-ledger](https://github.com/AldenHe/huayoupu-ledger)，已同步至上游 `ea07c243`（0.5.114-v6）。新增 [Personal-Bill](https://github.com/MisterGaohohoho/Personal-Bill) 月报、年报与平台账单分析的离线适配，直接使用有数的本地账本。版本为 **0.5.117-youshu.2**，以预发布版提供。
+本 Fork 基于 [AldenHe/huayoupu-ledger](https://github.com/AldenHe/huayoupu-ledger)，已同步至上游 `ea07c243`（0.5.114-v6）。新增 [Personal-Bill](https://github.com/MisterGaohohoho/Personal-Bill) 月报、年报与平台账单分析的离线适配，直接使用有数的本地账本。版本为 **0.5.118-youshu.3**，以预发布版提供。
 
 在 **我的 → 账单与备份 → 导入账单** 选择文件，自动识别微信、支付宝、洁账 XLSX、通用 CSV 和钱迹格式。首页与统计页共用 **按月 / 按年 / 全部 / 自定义** 时间范围及支付渠道、报销筛选。洁账导入正常计入总账和统计，不单列来源筛选项。账单、分类、退款、报销和账户余额共用原有记账数据，详情编辑后同步刷新。[使用说明与适配范围](.github/OFFLINE_BILLS.md)
 
@@ -113,3 +113,9 @@ V6 Tiny 的检测与识别权重合计约 **5.95 MiB**，V5 mobile 约 **20.37 M
 ## 社区交流
 
 [LINUX DO](https://linux.do/) · 真诚、友善、团结、专业。欢迎佬友交流使用体验、反馈问题，一起改进有数。
+
+## 导入记录与截图管理
+
+- **我的 → 账单与备份 → 导入记录**：查看文件导入结果，分页查看本次新增账单，按批次删除并在 10 秒内整批撤销。重复跳过的账单和仅更新退款信息的原账单不在删除范围内；账户与分类保留。仅从本版本起记录批次，批次随完整备份恢复，已有本地账单不会被恢复的批次接管。
+- **我的 → 截图管理**：查看占用并设置 50～5120 MiB 的上限，默认 500 MiB。保存或立即清理前显示预计清理量；旧账单的图片也可能被清理，但账单数据、商户图标和相册原图保留。正在识别、排队和撤销期图片暂时保护，可能短时超限。
+- 完整 ZIP 备份支持最大 6 GiB 解压内容，图片逐张处理；仍校验单文件大小、附件数量、哈希与路径。大备份导入需要足够的本机临时空间。旧 JSON / ZIP 备份继续可读。
