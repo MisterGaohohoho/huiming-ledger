@@ -9,7 +9,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
   await page.addInitScript(()=>{
    const at=new Date(2026,10,18,12).getTime();window.lastQuery=null;window.lastSelection=null;
    const rows=Array.from({length:251},(_,i)=>({id:251-i,merchant:'测试账单 '+i,category:i%2?'工资':'餐饮',note:'',occurredAt:at-i*1000,direction:i%2?'INCOME':'EXPENSE',source:'MANUAL',state:'POSTED',amountCents:100,paymentProvider:'wechat'}));
-   window.LedgerNative={remember(){},unifiedSnapshot(text){const q=JSON.parse(text);lastQuery=q;
+   window.LedgerNative={remember(){},save(){return JSON.stringify({ok:true,id:9999})},unifiedSnapshot(text){const q=JSON.parse(text);lastQuery=q;
     const filtered=rows.filter(r=>!q.direction||r.direction===q.direction),offset=q.beforeId?filtered.findIndex(r=>r.id===q.beforeId)+1:0,part=filtered.slice(offset,offset+200);
     return JSON.stringify({ok:true,records:part,channels:{ocr:{enabled:false}},automatic:{applications:[]},accounts:[],recognitionTasks:[],dataRevision:'1',ledgerView:{records:part,hasMore:offset+200<filtered.length,nextCursor:{occurredAt:part.at(-1)?.occurredAt,id:part.at(-1)?.id},summary:{totals:{income:12500,expense:12600,incomeCount:125,expenseCount:126},days:[{date:'2026-11-18',day:18,direction:'INCOME',amount:12500},{date:'2026-11-18',day:18,direction:'EXPENSE',amount:12600}]}}});
    },previewBatchDelete(text){const q=JSON.parse(text);lastSelection=q;const chosen=rows.filter(r=>(!q.direction||r.direction===q.direction)&&(q.all?!q.excluded.includes(r.id):q.ids.includes(r.id)));return JSON.stringify({ok:true,token:'preview',count:chosen.length,income:chosen.filter(r=>r.direction==='INCOME').length*100,expense:chosen.filter(r=>r.direction==='EXPENSE').length*100,reviewCount:0})}};
@@ -23,11 +23,15 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
   assert.match(await page.locator('#home-count').textContent(),/251/);
   assert.match(await page.locator('#home-combined').textContent(),/收入¥ 125支出¥ 126/);
   assert.match(await page.locator('.day-totals').first().textContent(),/收 ¥ 125支 ¥ 126/);
+  for(const id of [251,250]){await page.locator(`[data-record="${id}"]`).click();assert.equal(await page.evaluate(()=>filter),'all','Opening either direction must keep combined mode');await page.evaluate(()=>closeRecordPanel(false));assert.equal(await page.evaluate(()=>month),'2026-11-01..2026-11-18')}
   await page.locator('#load-more-records').click();assert.equal(await page.locator('[data-record]').count(),251);
   await page.locator('[data-record]').first().click({button:'right'});await page.locator('#selection-all').click();
   assert.equal(await page.evaluate(()=>lastSelection.direction),'');assert.match(await page.locator('#selection-count').textContent(),/251/);
   await page.locator('#selection-delete').click();assert.match(await page.locator('.batch-scope').textContent(),/收支/);
   await page.locator('#batch-cancel').click();await page.locator('#selection-cancel').click();
+  await page.evaluate(()=>{month='all';beginManual();$('manual-amount').value='1';$('manual-form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))});
+  assert.equal(await page.evaluate(()=>filter),'all','Manual save must retain combined mode');assert.equal(await page.evaluate(()=>month),'all','Manual save inside the scope must retain its dates');
+  await page.evaluate(()=>{month='2026-11-01..2026-11-18';refresh()});
   for(const large of [false,true]){
    await page.evaluate(large=>{LedgerUI.event('fontScale',large?1.5:1);ledgerView.summary.totals.income=98765432100;ledgerView.summary.totals.expense=12345678900;render();document.querySelector('#ledger').scrollTop=0;if(large){const sizes=[...document.querySelectorAll('#ledger *')].map(e=>[e,parseFloat(getComputedStyle(e).fontSize)]);sizes.forEach(([e,size])=>e.style.fontSize=(size*1.5)+'px')}},large);
    const metrics=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>innerWidth,controls:[...document.querySelectorAll('#month,.filter,.balance,#home-combined dd')].map(e=>{const r=e.getBoundingClientRect();return {left:r.left,right:r.right,width:r.width,scroll:e.scrollWidth,client:e.clientWidth}})}));

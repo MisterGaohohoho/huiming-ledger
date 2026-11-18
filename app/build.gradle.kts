@@ -58,8 +58,8 @@ android {
         applicationId = "net.ankio.ledger"
         minSdk = 30
         targetSdk = 36
-        versionCode = 125
-        versionName = "0.5.119-youshu.1"
+        versionCode = 126
+        versionName = "0.5.119-youshu.2"
         val updateBase = providers.environmentVariable("YOUSHU_UPDATE_BASE_URL").orNull?.takeIf { it.isNotBlank() } ?: "https://updates.invalid"
         require(Regex("https://[a-z0-9.-]+").matches(updateBase))
         buildConfigField("String", "UPDATE_BASE_URL", "\"$updateBase\"")
