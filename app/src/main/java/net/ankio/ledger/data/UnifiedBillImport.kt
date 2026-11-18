@@ -94,7 +94,7 @@ object UnifiedBillImport {
                     reason=if(item.record.uid in selection.possible)"与已有账单金额、时间相近，请核对是否重复后再确认" else "")
             }
             store.merge(records,categories=records.map { CustomCategory(it.bill.category,it.bill.direction!!) }.distinct())
-            batches.finish(before,fileName,"洁账",selection.duplicates,document.errors.size)
+            batches.finish(before,fileName,"洁账",selection.duplicates,document.errors.size,document.rows.map { it.record.bill.occurredAt })
             db.setTransactionSuccessful()
             (records.size-selection.possible.size) to selection.possible.size
         }finally{db.endTransaction()}

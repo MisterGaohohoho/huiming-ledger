@@ -12,7 +12,7 @@ class ImportBatches(private val store: LedgerStore) {
     fun before(): Map<String, String> = snapshots(store.readableDatabase)
 
     /** Must run inside the import's existing transaction, after all account and refund effects. */
-    fun finish(before: Map<String, String>, fileName: String, source: String, duplicates: Int, invalid: Int): String {
+    fun finish(before: Map<String, String>, fileName: String, source: String, duplicates: Int, invalid: Int, dates: List<Long> = emptyList()): String {
         val db = store.writableDatabase
         check(db.inTransaction())
         val after = snapshots(db)
@@ -20,10 +20,11 @@ class ImportBatches(private val store: LedgerStore) {
         val updated = after.count { (uid, value) -> uid in before && before[uid] != value }
         val uid = UUID.randomUUID().toString()
         val rows = store.all().filter { it.uid in created }
+        val range=dates.ifEmpty { rows.map { it.bill.occurredAt } }
         val metadata = JSONObject().put("uid", uid).put("fileName", fileName.take(255).ifBlank { source + "账单" })
             .put("source", source.take(40)).put("importedAt", System.currentTimeMillis())
-            .put("from", rows.minOfOrNull { it.bill.occurredAt } ?: 0L)
-            .put("through", rows.maxOfOrNull { it.bill.occurredAt } ?: 0L)
+            .put("from", range.minOrNull() ?: 0L)
+            .put("through", range.maxOrNull() ?: 0L)
             .put("created", created.size).put("review", rows.count { it.state.name == "REVIEW" })
             .put("updated", updated).put("duplicates", duplicates).put("invalid", invalid)
         db.insertOrThrow("import_batches", null, ContentValues().apply {
@@ -110,6 +111,8 @@ class ImportBatches(private val store: LedgerStore) {
             val batch = JSONObject(batches.getJSONObject(index).toString())
             val items = batch.getJSONArray("items"); batch.remove("items")
             val uid = batch.getString("uid")
+            val existing=db.rawQuery("SELECT metadata FROM import_batches WHERE uid=?",arrayOf(uid)).use { if(it.moveToFirst())JSONObject(it.getString(0)) else null }
+            if(existing!=null)require(existing.length()==batch.length() && existing.keys().asSequence().all { existing.opt(it)==batch.opt(it) }) { "导入批次元数据冲突，请核对备份来源" }
             db.insertWithOnConflict("import_batches", null, ContentValues().apply {
                 put("uid", uid); put("imported_at", batch.getLong("importedAt")); put("metadata", batch.toString())
             }, SQLiteDatabase.CONFLICT_IGNORE)

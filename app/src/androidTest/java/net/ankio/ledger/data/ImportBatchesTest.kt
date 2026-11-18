@@ -34,6 +34,7 @@ class ImportBatchesTest {
         val batches=ImportBatches(store)
         val second=batches.list(0).getJSONArray("items").let { items -> (0 until items.length()).map { items.getJSONObject(it) }.first { it.getString("fileName")=="第二次.csv" } }
         assertEquals(1,second.getInt("created"));assertEquals(1,second.getInt("duplicates"))
+        assertEquals(rows.first().bill.occurredAt,second.getLong("from"))
         val edited=store.all().first { it.uid==rows.first().uid };store.saveEdited(edited.copy(bill=edited.bill.copy(amountCents=200)))
         val manager=LedgerBatchDeletion(store);val preview=manager.preview(selection(first))
         assertEquals(251,preview.getInt("count"));assertEquals(25200L,preview.getLong("expense"));assertEquals(1,preview.getInt("editedCount"))
@@ -107,6 +108,10 @@ class ImportBatchesTest {
         val backup=LedgerBackup.decode(encoded.byteInputStream());assertEquals(1,LedgerBackup.restore(target,backup))
         assertEquals(1,ImportBatches(target).detail(batch(source),0).getJSONObject("batch").getInt("remaining"))
         assertEquals(0,LedgerBackup.restore(target,backup))
+        val conflict=JSONObject(encoded)
+        conflict.getJSONArray("importBatches").getJSONObject(0).put("fileName","不一致的来源.csv")
+        try{LedgerBackup.restore(target,LedgerBackup.decode(conflict.toString().byteInputStream()));fail("Conflicting batch metadata must not overwrite local provenance")}catch(_:IllegalArgumentException){}
+        assertEquals(2,target.all().size)
         val zip=ByteArrayOutputStream().also { LedgerArchive.write(source,ChannelSettings(context),it) }.toByteArray()
         val empty=store();LedgerArchive.read(zip.inputStream(),context.cacheDir).use { LedgerArchive.restore(empty,it) }
         assertEquals(2,ImportBatches(empty).detail(batch(source),0).getJSONObject("batch").getInt("remaining"))

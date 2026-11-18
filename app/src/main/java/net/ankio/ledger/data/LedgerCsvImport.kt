@@ -79,7 +79,7 @@ object LedgerCsvImport {
             val batches=ImportBatches(store);val before=batches.before()
             val selected=select(store,document.records)
             val count=store.merge(selected)
-            batches.finish(before,fileName,document.format,document.records.size-count,document.errors.size)
+            batches.finish(before,fileName,document.format,document.records.size-count,document.errors.size,document.records.map { it.bill.occurredAt })
             db.setTransactionSuccessful()
             Result(count,document.records.size-count,document.errors.size)
         } finally { db.endTransaction() }

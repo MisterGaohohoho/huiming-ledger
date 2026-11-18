@@ -135,7 +135,7 @@ object PlatformStatements {
                     else -> duplicate++
                 }
             }
-            batches.finish(before,fileName,if(document.platform=="wechat")"微信" else "支付宝",duplicate,document.errors.size+document.skipped)
+            batches.finish(before,fileName,if(document.platform=="wechat")"微信" else "支付宝",duplicate,document.errors.size+document.skipped,document.entries.map { it.bill.occurredAt })
             db.setTransactionSuccessful();Result(saved,updated,duplicate,review)
         } finally { db.endTransaction() }
     }
