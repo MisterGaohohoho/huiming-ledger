@@ -72,12 +72,14 @@ object LedgerCsvImport {
     }
 
     /** Recheck under the store monitor: recognition may finish while the preview is open. */
-    fun apply(store:LedgerStore,document:Document):Result=synchronized(store) {
+    fun apply(store:LedgerStore,document:Document,fileName:String="账单文件"):Result=synchronized(store) {
         val db=store.writableDatabase
         db.beginTransaction()
         try {
+            val batches=ImportBatches(store);val before=batches.before()
             val selected=select(store,document.records)
             val count=store.merge(selected)
+            batches.finish(before,fileName,document.format,document.records.size-count,document.errors.size)
             db.setTransactionSuccessful()
             Result(count,document.records.size-count,document.errors.size)
         } finally { db.endTransaction() }

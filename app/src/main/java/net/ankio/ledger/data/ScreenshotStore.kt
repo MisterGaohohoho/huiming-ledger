@@ -99,6 +99,65 @@ class ScreenshotStore internal constructor(context: Context, namespace: String =
         pruneUnreferenced(hash)
     }
 
+    fun limitBytes(): Long = preferences.getLong("max_bytes", MAX_BYTES).takeIf { it in 50L*1024*1024..MAX_CONFIGURED_BYTES } ?: MAX_BYTES
+    private data class Asset(val hash:String,val bytes:Long,val refs:MutableList<Ref> = mutableListOf())
+    private data class Ref(val owner:String,val at:Long,val state:String)
+    private data class CleanupPlan(val expired:List<String>,val hashes:List<String>,val bytes:Long,val signature:String)
+    private data class PendingLimit(val token:String,val bytes:Long,val plan:CleanupPlan,val at:Long)
+    private var pendingLimit:PendingLimit?=null
+
+    private fun cleanupPlan(now:Long,maxBytes:Long):CleanupPlan {
+        val assets=linkedMapOf<String,Asset>()
+        readableDatabase.rawQuery("SELECT hash,bytes FROM assets ORDER BY hash",null).use { c ->
+            while(c.moveToNext())assets[c.getString(0)]=Asset(c.getString(0),c.getLong(1))
+        }
+        readableDatabase.rawQuery("SELECT hash,owner,created_at,state FROM refs ORDER BY owner",null).use { c ->
+            while(c.moveToNext())assets[c.getString(0)]?.refs?.add(Ref(c.getString(1),c.getLong(2),c.getString(3)))
+        }
+        val signature=MessageDigest.getInstance("SHA-256").digest(assets.values.toString().toByteArray()).joinToString("") { "%02x".format(it) }
+        val expired=mutableListOf<String>();val hashes=mutableListOf<String>();var freed=0L
+        val candidates=mutableListOf<Pair<Asset,Long>>()
+        val days=retentionDays()
+        for(asset in assets.values) {
+            val kept=asset.refs.filter { ref ->
+                val keepDays=if(ref.state=="FAILED")7 else days
+                val drop=ref.state !in PROTECTED && ref.state!="HISTORY" &&
+                    (ref.state in DISCARD || keepDays>0 && ref.at<now-keepDays*DAY)
+                if(drop)expired+=ref.owner
+                !drop
+            }
+            if(kept.isEmpty()) { hashes+=asset.hash;freed+=asset.bytes }
+            else if(kept.none { it.state in PROTECTED })candidates+=asset to kept.minOf { it.at }
+        }
+        val total=assets.values.sumOf { it.bytes }
+        for((asset,_) in candidates.sortedWith(compareBy<Pair<Asset,Long>> { it.second }.thenBy { it.first.hash })) {
+            if(total-freed<=maxBytes)break
+            hashes+=asset.hash;freed+=asset.bytes
+        }
+        return CleanupPlan(expired,hashes,freed,signature)
+    }
+
+    @Synchronized fun previewLimit(mebibytes:Int,now:Long=System.currentTimeMillis()):JSONObject {
+        require(mebibytes in 50..5120) { "请输入 50～5120 MiB 的整数" }
+        val bytes=mebibytes.toLong()*1024*1024
+        val plan=cleanupPlan(now,bytes)
+        val pending=PendingLimit(java.util.UUID.randomUUID().toString(),bytes,plan,now);pendingLimit=pending
+        return stats().put("ok",true).put("token",pending.token).put("proposedBytes",bytes)
+            .put("removeCount",plan.hashes.size).put("removeBytes",plan.bytes)
+            .put("projectedBytes",stats().getLong("bytes")-plan.bytes)
+    }
+
+    @Synchronized fun applyLimit(token:String,now:Long=System.currentTimeMillis()):JSONObject {
+        val pending=pendingLimit
+        require(pending!=null && pending.token==token && now-pending.at in 0..300_000) { "确认已过期，请重新核对" }
+        require(cleanupPlan(now,pending.bytes)==pending.plan) { "截图状态已变化，请重新核对清理范围" }
+        check(preferences.edit().putLong("max_bytes",pending.bytes).commit()) { "无法保存截图上限" }
+        val before=stats().getLong("bytes")
+        val result=cleanup(now,pending.bytes)
+        pendingLimit=null
+        return result.put("freedBytes",(before-result.getLong("bytes")).coerceAtLeast(0))
+    }
+
     fun retentionDays(): Int = preferences.getInt("retention_days", 30)
     @Synchronized fun setRetentionDays(days: Int): JSONObject {
         require(days in setOf(0, 7, 30, 90)) { "请选择有效的截图保留期限" }
@@ -113,38 +172,21 @@ class ScreenshotStore internal constructor(context: Context, namespace: String =
         val protectedBytes = readableDatabase.rawQuery("SELECT COALESCE(SUM(bytes),0) FROM assets WHERE hash IN " +
             "(SELECT hash FROM refs WHERE state IN ('CAPTURING','QUEUED','RECOGNIZING','UNDO'))", null).use { it.moveToFirst(); it.getLong(0) }
         return JSONObject().put("count", assets.first).put("bytes", assets.second).put("protectedBytes", protectedBytes)
-            .put("maxBytes", MAX_BYTES).put("retentionDays", retentionDays()).put("failedRetentionDays", 7)
+            .put("maxBytes", limitBytes()).put("retentionDays", retentionDays()).put("failedRetentionDays", 7)
     }
 
     /** Retention/capacity remove images only; callers' bill text, state and icon assets are untouched. */
-    @Synchronized fun cleanup(now: Long = System.currentTimeMillis(), maxBytes: Long = MAX_BYTES): JSONObject {
+    @Synchronized fun cleanup(now: Long = System.currentTimeMillis(), maxBytes: Long = limitBytes()): JSONObject {
         require(maxBytes >= 0)
-        val db = writableDatabase
-        val days = retentionDays()
-        val references = db.rawQuery("SELECT owner,created_at,state FROM refs", null).use { c ->
-            buildList { while (c.moveToNext()) add(Triple(c.getString(0), c.getLong(1), c.getString(2))) }
-        }
-        for ((owner, createdAt, state) in references) {
-            // Financial evidence has no age expiry; the capacity pass can still clear its image.
-            if (state in PROTECTED || state == "HISTORY") continue
-            val keepDays = if (state == "FAILED") 7 else days
-            if (state in DISCARD || keepDays > 0 && createdAt < now - keepDays * DAY)
-                db.delete("refs", "owner=?", arrayOf(owner))
-        }
+        val plan=cleanupPlan(now,maxBytes)
+        val db=writableDatabase
+        db.beginTransaction()
+        try {
+            plan.expired.forEach { db.delete("refs","owner=?",arrayOf(it)) }
+            plan.hashes.forEach { db.delete("refs","hash=?",arrayOf(it)) }
+            db.setTransactionSuccessful()
+        } finally { db.endTransaction() }
         pruneUnreferenced()
-        var total = stats().getLong("bytes")
-        // A shared image remains protected while even one queued/running task still uses it.
-        val candidates = db.rawQuery("SELECT a.hash,a.bytes,MIN(r.created_at) AS oldest FROM assets a JOIN refs r ON a.hash=r.hash " +
-            "WHERE NOT EXISTS(SELECT 1 FROM refs p WHERE p.hash=a.hash AND p.state IN ('CAPTURING','QUEUED','RECOGNIZING','UNDO')) " +
-            "GROUP BY a.hash,a.bytes ORDER BY oldest ASC", null).use { c ->
-            buildList { while (c.moveToNext()) add(c.getString(0) to c.getLong(1)) }
-        }
-        for ((hash, bytes) in candidates) {
-            if (total <= maxBytes) break
-            db.delete("refs", "hash=?", arrayOf(hash)); total -= bytes
-        }
-        pruneUnreferenced()
-        // Crash leftovers are harmless and bounded by the same cleanup pass.
         val known = db.rawQuery("SELECT hash FROM assets", null).use { c -> buildSet { while(c.moveToNext())add(c.getString(0)) } }
         directory.listFiles()?.forEach { asset ->
             if (asset.name.endsWith(".tmp") || asset.name.endsWith(".jpg") && asset.name.removeSuffix(".jpg") !in known) asset.delete()
@@ -165,6 +207,7 @@ class ScreenshotStore internal constructor(context: Context, namespace: String =
 
     companion object {
         const val MAX_BYTES = 500L * 1024 * 1024
+        const val MAX_CONFIGURED_BYTES = 5120L * 1024 * 1024
         private const val DAY = 86_400_000L
         private val PROTECTED = setOf("CAPTURING", "QUEUED", "RECOGNIZING", "UNDO")
         private val DISCARD = setOf("NO_BILL", "DUPLICATE", "CANCELLED","SKIPPED")

@@ -77,9 +77,10 @@ object UnifiedBillImport {
         return Selection(fresh,document.rows.size-fresh.size,possible)
     }
 
-    fun apply(store:LedgerStore,document:Jiezhang,accountMapping:Map<String,String?>):Pair<Int,Int> = synchronized(store) {
+    fun apply(store:LedgerStore,document:Jiezhang,accountMapping:Map<String,String?>,fileName:String="洁账账单"):Pair<Int,Int> = synchronized(store) {
         val db=store.writableDatabase;db.beginTransaction()
         try {
+            val batches=ImportBatches(store);val before=batches.before()
             val selection=preview(store,document)
             val resolved=accountMapping.mapValues { (asset,uid)->
                 if(uid=="@new")store.accounts().firstOrNull{LedgerAccount.nameKey(it.name)==LedgerAccount.nameKey(asset)}?.uid
@@ -93,6 +94,7 @@ object UnifiedBillImport {
                     reason=if(item.record.uid in selection.possible)"与已有账单金额、时间相近，请核对是否重复后再确认" else "")
             }
             store.merge(records,categories=records.map { CustomCategory(it.bill.category,it.bill.direction!!) }.distinct())
+            batches.finish(before,fileName,"洁账",selection.duplicates,document.errors.size)
             db.setTransactionSuccessful()
             (records.size-selection.possible.size) to selection.possible.size
         }finally{db.endTransaction()}

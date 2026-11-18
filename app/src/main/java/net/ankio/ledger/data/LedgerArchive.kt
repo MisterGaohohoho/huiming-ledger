@@ -15,8 +15,8 @@ import java.util.zip.ZipOutputStream
 object LedgerArchive {
     const val MAX_IMAGE_BYTES = 5 * 1024 * 1024
     const val MAX_MANIFEST_BYTES = 128 * 1024 * 1024
-    const val MAX_TOTAL_BYTES = 512L * 1024 * 1024
-    private const val MAX_ZIP_BYTES = 544L * 1024 * 1024
+    const val MAX_TOTAL_BYTES = 6L * 1024 * 1024 * 1024
+    private const val MAX_ZIP_BYTES = MAX_TOTAL_BYTES + 256L * 1024 * 1024
     const val MAX_ATTACHMENTS = 100_000
     private val hashPattern = Regex("[0-9a-f]{64}")
     private val attachmentPattern = Regex("images/([0-9a-f]{64})\\.bin")
@@ -53,6 +53,7 @@ object LedgerArchive {
         val reimbursements = ReimbursementStore(store.reimbursementContext, store)
         val reimbursement = reimbursements.backupMetadata()
         ledger.put("reimbursement", reimbursement)
+        ledger.put("importBatches", ImportBatches(store).backup())
         val histories = JSONObject()
         val icons = JSONObject()
         val stored = mutableSetOf<String>()
@@ -66,7 +67,7 @@ object LedgerArchive {
                 if (stored.add(hash)) {
                     require(stored.size <= MAX_ATTACHMENTS) { "备份图片数量过多" }
                     bytes += image.size
-                    require(bytes <= MAX_TOTAL_BYTES) { "备份图片超过 512 MB" }
+                    require(bytes <= MAX_TOTAL_BYTES) { "备份图片超过 6 GiB" }
                     zip.putNextEntry(ZipEntry("images/$hash.bin"))
                     zip.write(image)
                     zip.closeEntry()
@@ -100,7 +101,7 @@ object LedgerArchive {
                 val a=originals.getJSONObject(i);val hash=a.getString("sha256")
                 require(originalHashes.add(hash) && stored.size+originalHashes.size<=MAX_ATTACHMENTS) { "报销原件重复或数量过多" }
                 val file=reimbursements.attachmentFile(a.getString("uid"))
-                bytes+=file.length();require(bytes<=MAX_TOTAL_BYTES) { "备份内容超过 512 MB" }
+                bytes+=file.length();require(bytes<=MAX_TOTAL_BYTES) { "备份内容超过 6 GiB" }
                 zip.putNextEntry(ZipEntry("originals/$hash.bin"))
                 file.inputStream().use { it.copyTo(zip,8192) };zip.closeEntry()
             }

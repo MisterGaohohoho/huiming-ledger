@@ -112,9 +112,10 @@ object PlatformStatements {
         return Document(platform,entries,skipped,errors)
     }
 
-    fun apply(store:LedgerStore,document:Document):Result=synchronized(store) {
+    fun apply(store:LedgerStore,document:Document,fileName:String="账单文件"):Result=synchronized(store) {
         val db=store.writableDatabase;db.beginTransaction()
         try {
+            val batches=ImportBatches(store);val before=batches.before()
             val existing=store.all()
             val known=existing.mapTo(mutableSetOf()){it.capture.text}
             val ids=existing.mapTo(mutableSetOf()){it.id};var saved=0;var updated=0;var duplicate=0;var review=0
@@ -134,6 +135,7 @@ object PlatformStatements {
                     else -> duplicate++
                 }
             }
+            batches.finish(before,fileName,if(document.platform=="wechat")"微信" else "支付宝",duplicate,document.errors.size+document.skipped)
             db.setTransactionSuccessful();Result(saved,updated,duplicate,review)
         } finally { db.endTransaction() }
     }

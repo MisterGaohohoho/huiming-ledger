@@ -39,7 +39,7 @@ sealed class IngestResult {
 
 data class DeletedRecord(val id:Long,val expiresAt:Long,val batchId:String?=null,val count:Int=1)
 
-class LedgerStore(context: Context, private val name: String = "ledger.db", private val screenshots: ScreenshotStore = ScreenshotStore.get(context)) : SQLiteOpenHelper(context, name, null, 15) {
+class LedgerStore(context: Context, private val name: String = "ledger.db", private val screenshots: ScreenshotStore = ScreenshotStore.get(context)) : SQLiteOpenHelper(context, name, null, 16) {
     internal val reimbursementContext: Context = context.applicationContext
     internal val reimbursementDirectory = java.io.File(context.filesDir, "reimbursement-originals/" + UUID.nameUUIDFromBytes(name.toByteArray()).toString())
     private fun imageOwner(id: Long) = "ledger:$name:$id"
@@ -81,6 +81,7 @@ class LedgerStore(context: Context, private val name: String = "ledger.db", priv
         createRefunds(db)
         createIdentitiesAndUndo(db)
         createBatchDeletionSchema(db)
+        ImportBatches.create(db)
         ReimbursementStore.createSchema(db)
         AccountPostings.create(db)
         AccountTransfers.createSchema(db)
@@ -88,10 +89,11 @@ class LedgerStore(context: Context, private val name: String = "ledger.db", priv
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if(oldVersion<13)upgradeLegacy(db,oldVersion,13)
-        check(oldVersion in 1..14 && newVersion==15) { "Unsupported database migration $oldVersion → $newVersion" }
+        check(oldVersion in 1..15 && newVersion==16) { "Unsupported database migration $oldVersion → $newVersion" }
         AccountPostings.create(db)
         AccountTransfers.createSchema(db)
         createBatchDeletionSchema(db)
+        ImportBatches.create(db)
     }
 
     private fun createBatchDeletionSchema(db:SQLiteDatabase) {

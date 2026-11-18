@@ -22,6 +22,9 @@ internal class PlatformImportController(private val activity:MainActivity) {
     fun read(uri:Uri,platform:String) { activity.uiScope.launch {
         activity.dispatch("fileOperation",JSONObject.quote("正在读取账单"))
         try {
+            val fileName=withContext(Dispatchers.IO) {
+                runCatching { activity.contentResolver.query(uri,arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),null,null,null)?.use { if(it.moveToFirst())it.getString(0) else null } }.getOrNull()?.take(255)?:"账单文件"
+            }
             val imported=withContext(Dispatchers.IO) {
                 (activity.contentResolver.openInputStream(uri)?:error("无法读取文件")).use {
                     if(platform=="auto")UnifiedBillImport.read(it) else UnifiedBillImport.Platform(PlatformStatements.read(it,platform))
@@ -31,9 +34,9 @@ internal class PlatformImportController(private val activity:MainActivity) {
             if(activity.isFinishing || activity.isDestroyed)return@launch
             if(imported is UnifiedBillImport.General){
                 val preview=withContext(Dispatchers.IO){LedgerCsvImport.preview(activity.ledger.store,imported.document)}
-                activity.previewBills(imported.document,preview);return@launch
+                activity.previewBills(imported.document,preview,fileName);return@launch
             }
-            if(imported is UnifiedBillImport.Jiezhang){previewJiezhang(imported);return@launch}
+            if(imported is UnifiedBillImport.Jiezhang){previewJiezhang(imported,fileName);return@launch}
             val document=(imported as UnifiedBillImport.Platform).document
             val sheet=MintDialog(activity,"${if(document.platform=="wechat")"微信" else "支付宝"}账单导入","文件在本机解析")
             sheet.content.addView(sheet.text("可处理 ${document.entries.size} 笔",20,MintDialog.INK,true))
@@ -58,7 +61,7 @@ internal class PlatformImportController(private val activity:MainActivity) {
                 activity.uiScope.launch {
                     activity.dispatch("fileOperation",JSONObject.quote("正在导入账单"))
                     try {
-                        val result=withContext(Dispatchers.IO){ensureActive();PlatformStatements.apply(activity.ledger.store,document)}
+                        val result=withContext(Dispatchers.IO){ensureActive();PlatformStatements.apply(activity.ledger.store,document,fileName)}
                         activity.ledger.changed()
                         activity.message("新增 ${result.saved}，更新 ${result.updated}，重复 ${result.duplicates}，待确认 ${result.review}")
                     } catch(cancelled:CancellationException){throw cancelled}
@@ -71,7 +74,7 @@ internal class PlatformImportController(private val activity:MainActivity) {
         catch(error:Exception){activity.message(error.message?.take(100)?:"无法读取账单文件")}
         finally{activity.dispatch("fileOperation","null")}
     } }
-    private suspend fun previewJiezhang(document:UnifiedBillImport.Jiezhang) {
+    private suspend fun previewJiezhang(document:UnifiedBillImport.Jiezhang,fileName:String) {
         val selection=withContext(Dispatchers.IO){UnifiedBillImport.preview(activity.ledger.store,document)}
         if(activity.isFinishing || activity.isDestroyed)return
         val sheet=MintDialog(activity,"导入账单预览","已识别：洁账 XLSX / CSV")
@@ -117,7 +120,7 @@ internal class PlatformImportController(private val activity:MainActivity) {
             sheet.dismiss();activity.uiScope.launch {
                 activity.dispatch("fileOperation",JSONObject.quote("正在导入账单"))
                 try {
-                    val result=withContext(Dispatchers.IO){UnifiedBillImport.apply(activity.ledger.store,document,mapping.toMap())}
+                    val result=withContext(Dispatchers.IO){UnifiedBillImport.apply(activity.ledger.store,document,mapping.toMap(),fileName)}
                     activity.ledger.changed();activity.message("已入账 ${result.first} 笔，待确认 ${result.second} 笔")
                 }catch(cancelled:CancellationException){throw cancelled}
                 catch(error:Exception){activity.message(error.message?.take(90)?:"导入失败，账本未修改")}

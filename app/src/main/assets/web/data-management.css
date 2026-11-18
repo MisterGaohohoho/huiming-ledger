@@ -1,0 +1,14 @@
+.management-filename,.import-batch-row b{overflow-wrap:anywhere;white-space:normal}
+.import-batch-row>span:first-child{min-width:0;flex:1}
+.import-batch-row small,.management-bill small{display:block;font-size:12px;font-weight:400;color:#7a8597;line-height:1.7;margin-top:4px}
+.management-more,.management-back{display:block;width:100%;padding:14px;margin-top:10px;border-radius:18px;background:#edf1f6;font-size:14px;min-height:48px}
+.management-empty{padding:24px 0;text-align:center}
+.management-bill{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid #edf1f6;font-size:14px}
+.management-bill>span{min-width:0;overflow-wrap:anywhere}.management-bill strong{flex-shrink:0}
+.management-detail .sheet-actions{margin-top:20px}.management-detail .sheet-actions button{white-space:normal;min-width:0}
+.storage-overview{padding:20px 0;display:flex;flex-direction:column;gap:8px}.storage-overview strong{font-size:32px;overflow-wrap:anywhere}.storage-overview span,.storage-overview small{font-size:13px;color:#7a8597;line-height:1.6}
+.storage-limit-label{display:block;margin:12px 0;font-size:14px;font-weight:600}.storage-limit-input{box-sizing:border-box;width:100%;min-height:50px;padding:12px 16px;border:1px solid #cbd7d1;border-radius:16px;font:inherit;background:#fff}
+.storage-presets{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.storage-presets button{padding:10px 12px;min-height:44px;border-radius:14px;background:#edf1f6;font-size:13px}
+.storage-over-limit{color:#a65a27}#screenshot-storage-summary{display:block;font-size:11px;font-weight:400;color:#7a8597;line-height:1.6;margin-top:3px;overflow-wrap:anywhere}
+#screenshot-storage>b{min-width:0;white-space:normal}
+@media(max-width:360px){.management-bill{flex-wrap:wrap}.storage-overview strong{font-size:27px}}

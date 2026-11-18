@@ -370,8 +370,9 @@ function deleteEntry(id,task=false){
 }
 $('delete-record').onclick=()=>requestDelete(draft?.recognitionTaskId||draft?.id,!!draft?.recognitionTaskId);
 function showDataTools(){
- showSheet('账单与备份',`<button class="sheet-row" id="import-bills"><span><b>导入账单</b><small>微信 / 支付宝 / 洁账 / 通用 CSV / 钱迹 · 自动识别</small></span><span aria-hidden="true">›</span></button><button class="sheet-row" id="export-bills"><span><b>导出全部账单</b><small>CSV 表格 · 查看或迁移到其他记账应用</small></span><span aria-hidden="true">›</span></button><button class="sheet-row" id="export-backup"><span><b>完整备份</b><small>ZIP · 账单、截图、商户图标及账户</small></span><span aria-hidden="true">›</span></button><button class="sheet-row" id="restore-backup"><span><b>恢复备份</b><small>支持 ZIP 与旧版 JSON，保留已有编辑</small></span><span aria-hidden="true">›</span></button>`);
+ showSheet('账单与备份',`<button class="sheet-row" id="import-bills"><span><b>导入账单</b><small>微信 / 支付宝 / 洁账 / 通用 CSV / 钱迹 · 自动识别</small></span><span aria-hidden="true">›</span></button><button class="sheet-row" id="import-history"><span><b>导入记录</b><small>查看导入结果，按批次删除新增账单</small></span><span aria-hidden="true">›</span></button><button class="sheet-row" id="export-bills"><span><b>导出全部账单</b><small>CSV 表格 · 查看或迁移到其他记账应用</small></span><span aria-hidden="true">›</span></button><button class="sheet-row" id="export-backup"><span><b>完整备份</b><small>ZIP · 账单、截图、商户图标及账户</small></span><span aria-hidden="true">›</span></button><button class="sheet-row" id="restore-backup"><span><b>恢复备份</b><small>支持 ZIP 与旧版 JSON，保留已有编辑</small></span><span aria-hidden="true">›</span></button>`);
  $('import-bills').onclick=()=>{closeSheet();native?.importBills?.()};
+ $('import-history').onclick=()=>DataManagement.history();
  $('export-bills').onclick=showBillExport;
  $('export-backup').onclick=()=>{closeSheet();native?.backup('export')};
  $('restore-backup').onclick=()=>{closeSheet();native?.backup('restore')};

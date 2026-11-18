@@ -40,6 +40,25 @@ class LedgerArchiveTest {
         return ByteArrayOutputStream().also { bitmap.compress(Bitmap.CompressFormat.PNG,100,it);bitmap.recycle() }.toByteArray()
     }
     private fun archive(source:LedgerStore):ByteArray=ByteArrayOutputStream().also { LedgerArchive.write(source,ChannelSettings(context),it) }.toByteArray()
+
+    @Test fun streamingArchiveAboveOld512MiBLimitRoundTripsWithoutLoadingAllImages(){
+        val source=store();val target=store()
+        val png=image(width=1,height=1)
+        repeat(103) { index ->
+            val record=record("大备份合成商户 $index")
+            source.merge(listOf(record));val saved=source.all().first { it.uid==record.uid }
+            // Valid tiny PNG plus trailing padding exercises >512 MiB while each allocation stays <=5 MiB.
+            val bytes=png.copyOf(LedgerArchive.MAX_IMAGE_BYTES);bytes[bytes.lastIndex]=index.toByte()
+            source.restoreHistory(saved.id,listOf(RestoredCaptureHistory(RecordCaptureHistory(1,at,"payment",2250,0,"合成归档",true),bytes)))
+        }
+        val file=File(cache,"large.zip")
+        val summary=file.outputStream().use { LedgerArchive.write(source,ChannelSettings(context),it) }
+        assertEquals(515L*1024*1024,summary.attachmentBytes)
+        file.inputStream().use { input -> LedgerArchive.read(input,cache).use { prepared ->
+            assertEquals(103,prepared.recordCount);assertEquals(103,LedgerArchive.restore(target,prepared))
+        } }
+        val restored=target.all().first();assertEquals(LedgerArchive.MAX_IMAGE_BYTES,target.historyScreenshot(restored.id,1)!!.size)
+    }
     private fun entries(bytes:ByteArray):LinkedHashMap<String,ByteArray> {
         val result=linkedMapOf<String,ByteArray>()
         ZipInputStream(ByteArrayInputStream(bytes)).use { zip -> while(true) {
