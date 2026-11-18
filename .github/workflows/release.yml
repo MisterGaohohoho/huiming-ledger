@@ -27,6 +27,9 @@ jobs:
     if: github.repository == 'MisterGaohohoho/youshu-ledger'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    concurrency:
+      group: signed-update-channel
+      cancel-in-progress: false
     permissions:
       actions: read
       contents: write
@@ -34,7 +37,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
       EXPECTED_CERT_SHA256: ${{ vars.ANDROID_CERT_SHA256 }}
-      IS_PRERELEASE: ${{ github.event_name == 'push' || inputs.prerelease }}
+      IS_PRERELEASE: ${{ (github.event_name == 'workflow_dispatch' && inputs.prerelease) || contains(github.ref_name, '-rc.') || contains(github.ref_name, '-beta.') || contains(github.ref_name, '-alpha.') }}
     steps:
       - name: Validate version tag
         run: |
@@ -73,6 +76,8 @@ jobs:
           assert 'v' + metadata['version'] == os.environ['RELEASE_TAG'], 'Tag must match the app version'
           assert metadata['package'] == 'net.ankio.ledger'
           assert metadata['abi'] == 'arm64-v8a' and metadata['signed'] is True
+          assert metadata['updatesConfigured'] is True, 'Update origin was not configured at build time'
+          assert metadata['updateKeySha256'] == hashlib.sha256(pathlib.Path('../app/src/main/res/raw/update_public_key.der').read_bytes()).hexdigest()
           apk, = pathlib.Path('.').glob('*.apk')
           assert apk.name == metadata['filename'] and not apk.name.endswith('-unsigned.apk')
           assert hashlib.sha256(apk.read_bytes()).hexdigest() == metadata['sha256']
@@ -103,3 +108,9 @@ jobs:
           flags=(--latest)
           if [[ "$IS_PRERELEASE" == 'true' ]]; then flags=(--prerelease --latest=false); fi
           gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --verify-tag "${flags[@]}" --title "有数 ${RELEASE_TAG#v} · MisterGaohohoho" --notes-file "$RUNNER_TEMP/release-notes.md" release/*.apk release/*.sha256 release/Youshu-Ledger-source.zip release/build-info.json
+
+      - name: Publish signed stable update metadata after assets exist
+        if: env.IS_PRERELEASE == 'false'
+        env:
+          UPDATE_MANIFEST_PRIVATE_KEY: ${{ secrets.UPDATE_MANIFEST_PRIVATE_KEY }}
+        run: python scripts/publish-update-manifest.py --release-dir release --notes .github/RELEASE_NOTES.md

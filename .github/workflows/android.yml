@@ -2,9 +2,12 @@ name: Android
 
 on:
   push:
-    branches: ['**']
+    branches-ignore: ['update-channel']
   pull_request:
   workflow_dispatch:
+
+env:
+  YOUSHU_UPDATE_BASE_URL: ${{ secrets.UPDATE_BASE_URL }}
 
 permissions:
   contents: read
@@ -59,6 +62,7 @@ jobs:
           node scripts/check-offline-bills.cjs
           node scripts/check-ledger-selection.cjs
           node scripts/check-data-management.cjs
+          node scripts/check-home-all.cjs
 
   verify:
     runs-on: ubuntu-24.04
@@ -106,7 +110,7 @@ jobs:
           arch: x86_64
           profile: pixel_3a
           disable-animations: true
-          script: bash ./gradlew -PledgerAbi=x86_64 '-Pandroid.testInstrumentationRunnerArguments.class=net.ankio.ledger.LicenseDisclosureTest,net.ankio.ledger.ExecutionLogTest,net.ankio.ledger.ocr.LocalModeSettingsTest,net.ankio.ledger.data.LedgerCursorOptimizationTest,net.ankio.ledger.data.LedgerCandidateOptimizationTest,net.ankio.ledger.data.RecognitionRecoveryOptimizationTest,net.ankio.ledger.data.LedgerQuery056Test,net.ankio.ledger.data.AutomaticSupplementTest,net.ankio.ledger.data.RefundPersistenceTest,net.ankio.ledger.data.LedgerIdentity056Test,net.ankio.ledger.data.MerchantEnrichmentTest,net.ankio.ledger.data.LedgerUndo056Test,net.ankio.ledger.data.CaptureSupplementTest,net.ankio.ledger.PaymentRecognitionQueueTest,net.ankio.ledger.PaymentVisitsTest,net.ankio.ledger.BackgroundSettingsSyncTest,net.ankio.ledger.PermissionTrimTest,net.ankio.ledger.CaptureReadinessTest,net.ankio.ledger.CaptureRestoreTest,net.ankio.ledger.RecognitionBannerFallbackTest,net.ankio.ledger.SetupStepsTest,net.ankio.ledger.ocr.IconGeneralityTest,net.ankio.ledger.ocr.LocalHeaderIconTest,net.ankio.ledger.IconLocationRegressionTest,net.ankio.ledger.MerchantIconTest,net.ankio.ledger.ocr.LocalRecognitionClientTest,net.ankio.ledger.data.AccountPostingTest,net.ankio.ledger.data.ChannelDefaultAccountTest,net.ankio.ledger.data.MonthlyBudgetTest,net.ankio.ledger.data.ReimbursementTest,net.ankio.ledger.data.BillReportTest,net.ankio.ledger.data.ReportEvidenceTest,net.ankio.ledger.data.AccountNameTest,net.ankio.ledger.data.RefundBackupTest,net.ankio.ledger.AccountIdentityCurrencyUiTest,net.ankio.ledger.BillReportUiTest,net.ankio.ledger.data.OfflineBillsTest,net.ankio.ledger.data.LedgerBatchDeletionTest,net.ankio.ledger.data.InvalidRecognitionCleanupTest,net.ankio.ledger.data.ImportBatchesTest,net.ankio.ledger.data.ScreenshotPolicyTest,net.ankio.ledger.data.LedgerArchiveTest,net.ankio.ledger.DataManagementUiTest' :app:connectedDebugAndroidTest --stacktrace
+          script: bash ./gradlew -PledgerAbi=x86_64 '-Pandroid.testInstrumentationRunnerArguments.class=net.ankio.ledger.LicenseDisclosureTest,net.ankio.ledger.ExecutionLogTest,net.ankio.ledger.ocr.LocalModeSettingsTest,net.ankio.ledger.data.LedgerCursorOptimizationTest,net.ankio.ledger.data.LedgerCandidateOptimizationTest,net.ankio.ledger.data.RecognitionRecoveryOptimizationTest,net.ankio.ledger.data.LedgerQuery056Test,net.ankio.ledger.data.AutomaticSupplementTest,net.ankio.ledger.data.RefundPersistenceTest,net.ankio.ledger.data.LedgerIdentity056Test,net.ankio.ledger.data.MerchantEnrichmentTest,net.ankio.ledger.data.LedgerUndo056Test,net.ankio.ledger.data.CaptureSupplementTest,net.ankio.ledger.PaymentRecognitionQueueTest,net.ankio.ledger.PaymentVisitsTest,net.ankio.ledger.BackgroundSettingsSyncTest,net.ankio.ledger.PermissionTrimTest,net.ankio.ledger.CaptureReadinessTest,net.ankio.ledger.CaptureRestoreTest,net.ankio.ledger.RecognitionBannerFallbackTest,net.ankio.ledger.SetupStepsTest,net.ankio.ledger.ocr.IconGeneralityTest,net.ankio.ledger.ocr.LocalHeaderIconTest,net.ankio.ledger.IconLocationRegressionTest,net.ankio.ledger.MerchantIconTest,net.ankio.ledger.ocr.LocalRecognitionClientTest,net.ankio.ledger.data.AccountPostingTest,net.ankio.ledger.data.ChannelDefaultAccountTest,net.ankio.ledger.data.MonthlyBudgetTest,net.ankio.ledger.data.ReimbursementTest,net.ankio.ledger.data.BillReportTest,net.ankio.ledger.data.ReportEvidenceTest,net.ankio.ledger.data.AccountNameTest,net.ankio.ledger.data.RefundBackupTest,net.ankio.ledger.AccountIdentityCurrencyUiTest,net.ankio.ledger.BillReportUiTest,net.ankio.ledger.data.OfflineBillsTest,net.ankio.ledger.data.LedgerBatchDeletionTest,net.ankio.ledger.data.InvalidRecognitionCleanupTest,net.ankio.ledger.data.ImportBatchesTest,net.ankio.ledger.data.ScreenshotPolicyTest,net.ankio.ledger.data.LedgerArchiveTest,net.ankio.ledger.DataManagementUiTest,net.ankio.ledger.UpdateUiSecurityTest' :app:connectedDebugAndroidTest --stacktrace
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -194,7 +198,9 @@ jobs:
           (output / (apk.name + '.sha256')).write_text(f'{digest}  {apk.name}\n')
           metadata = json.loads((output / 'build-info.json').read_text())
           metadata.update(commit=os.environ['GITHUB_SHA'], filename=apk.name,
-                          sha256=digest, signed=not apk.name.endswith('-unsigned.apk'))
+                          sha256=digest, signed=not apk.name.endswith('-unsigned.apk'),
+                          updatesConfigured=bool(os.environ.get('YOUSHU_UPDATE_BASE_URL')),
+                          updateKeySha256=hashlib.sha256(pathlib.Path('app/src/main/res/raw/update_public_key.der').read_bytes()).hexdigest())
           (output / 'build-info.json').write_text(json.dumps(metadata, indent=2) + '\n')
           PY
       - uses: actions/upload-artifact@v4

@@ -26,17 +26,18 @@ class BundledRecognitionUiTest {
             web.run("window.LedgerSetup.close(false)")
         }
     }
-    @Test fun settingsAndHelpHaveNoEngineConfigurationAndAppHasNoNetworkPermission() {
-        assertFalse(app.packageManager.getPackageInfo(app.packageName,PackageManager.GET_PERMISSIONS)
+    @Test fun settingsAndHelpHaveNoEngineConfigurationAndLedgerStaysOffline() {
+        assertTrue(app.packageManager.getPackageInfo(app.packageName,PackageManager.GET_PERMISSIONS)
             .requestedPermissions.orEmpty().contains("android.permission.INTERNET"))
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             val web=WebUiProbe(scenario);web.ready();web.run("go('settings')")
-            web.await("!document.querySelector('#model-info') && document.querySelectorAll('.account-preferences>button').length===2")
+            web.await("!document.querySelector('#model-info') && !!document.querySelector('#app-updates')")
             web.await("!/(OCR|识别模型|API Key|远端|云端)/i.test(document.querySelector('#settings').textContent)")
             web.run("document.querySelector('#settings-help').click()")
             web.await("document.querySelector('#sheet-content').textContent.includes('截图不上传') && !/(OCR|识别模型|API Key|远端|云端)/i.test(document.querySelector('#sheet-content').textContent)")
             web.run("closeSheet(false)")
             scenario.onActivity { activity ->
+                assertTrue(activity.webView.settings.blockNetworkLoads)
                 assertFalse(net.ankio.ledger.ui.LedgerWebBridge::class.java.methods.any { it.name.startsWith("configureModel") })
                 activity.privacy()
                 val page=activity.window.decorView.findViewWithTag<View>("privacy-page")!!

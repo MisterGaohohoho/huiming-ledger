@@ -16,7 +16,7 @@ class PublicSourceTest(unittest.TestCase):
             self.assertTrue(MODULE.publishable(name), name)
 
     def test_private_artifacts_are_excluded_even_when_tracked(self):
-        for name in ['output/capture.png', 'artifacts/app.apk', '.tools/private.txt', 'local.properties',
+        for name in ['tools/update-worker/worker.js', 'output/capture.png', 'artifacts/app.apk', '.tools/private.txt', 'local.properties',
                      'app/build/generated/model.onnx', 'tools/ui-checks/node_modules/a/index.js',
                      'signing/release.jks', 'docs/sources.md', 'app/ledger.db', '.env', 'scripts/__pycache__/a.pyc']:
             self.assertFalse(MODULE.publishable(name), name)

@@ -84,23 +84,29 @@ class LedgerReadView(private val store:LedgerStore) {
         return JSONObject().put("records",rows).put("hasMore",more).put("offset",offset).put("limit",limit)
             .put("nextCursor",if(more && last!=null)JSONObject().put("occurredAt",last.getLong("occurredAt")).put("id",last.getLong("id")) else JSONObject.NULL)
     }
-    fun summary(month:String,reimbursement:String="",channel:String=""):JSONObject {
+    fun summary(month:String,reimbursement:String="",channel:String="",search:String=""):JSONObject {
         val w=window(month);val result=JSONObject().put("month",month)
         require(channel in setOf("","wechat","alipay","other"))
         val scope=reimbursementWhere(reimbursement)+(if(channel.isEmpty())"" else " AND (${OfflineAnalytics.CHANNEL_SQL})='$channel'")
         val amount=ReimbursementStore.statisticalAmountSql()
         val statisticalScope=" AND (r.direction!='INCOME' OR $amount>0)"
+        val (matched,matchedArgs)=matchingWhere(month,search,reimbursement=reimbursement,statistical=true,channel=channel)
+        val currentWhere="state='POSTED' AND $matched"
         fun totals(start:Long,end:Long):JSONObject {
             val total=JSONObject().put("expense",0).put("income",0).put("expenseCount",0).put("incomeCount",0)
-            store.readableDatabase.rawQuery("SELECT direction,COALESCE(SUM($amount),0),COUNT(*) FROM records r WHERE state='POSTED' AND occurred_at>=? AND occurred_at<? AND NOT EXISTS(SELECT 1 FROM record_deletions d WHERE d.record_id=r.id)$scope$statisticalScope GROUP BY direction",arrayOf(start.toString(),end.toString())).use { c ->
+            val current=start==w.start && end==w.end
+            if(search.isNotBlank() && !current)return total
+            val where=if(current)currentWhere else "state='POSTED' AND occurred_at>=? AND occurred_at<? AND NOT EXISTS(SELECT 1 FROM record_deletions d WHERE d.record_id=r.id)$scope$statisticalScope"
+            val arguments=if(current)matchedArgs.toTypedArray() else arrayOf(start.toString(),end.toString())
+            store.readableDatabase.rawQuery("SELECT direction,COALESCE(SUM($amount),0),COUNT(*) FROM records r WHERE $where GROUP BY direction",arguments).use { c ->
                 while(c.moveToNext()){val key=if(c.getString(0)=="INCOME")"income" else "expense";total.put(key,c.getLong(1));total.put(key+"Count",c.getInt(2))}
             };return total
         }
         result.put("totals",totals(w.start,w.end));result.put("previous",totals(w.previous,w.start))
-        val categories=JSONArray();store.readableDatabase.rawQuery("SELECT direction,category,SUM($amount),COUNT(*) FROM records r WHERE state='POSTED' AND occurred_at>=? AND occurred_at<? AND NOT EXISTS(SELECT 1 FROM record_deletions d WHERE d.record_id=r.id)$scope$statisticalScope GROUP BY direction,category ORDER BY SUM($amount) DESC",arrayOf(w.start.toString(),w.end.toString())).use { c ->
+        val categories=JSONArray();store.readableDatabase.rawQuery("SELECT direction,category,SUM($amount),COUNT(*) FROM records r WHERE $currentWhere GROUP BY direction,category ORDER BY SUM($amount) DESC",matchedArgs.toTypedArray()).use { c ->
             while(c.moveToNext())categories.put(JSONObject().put("direction",c.getString(0)).put("name",c.getString(1)).put("amount",c.getLong(2)).put("count",c.getInt(3)))
         };result.put("categories",categories)
-        val days=JSONArray();store.readableDatabase.rawQuery("SELECT strftime('%Y-%m-%d',occurred_at/1000,'unixepoch','localtime'),direction,SUM($amount) FROM records r WHERE state='POSTED' AND occurred_at>=? AND occurred_at<? AND NOT EXISTS(SELECT 1 FROM record_deletions d WHERE d.record_id=r.id)$scope$statisticalScope GROUP BY 1,2 ORDER BY 1",arrayOf(w.start.toString(),w.end.toString())).use { c ->
+        val days=JSONArray();store.readableDatabase.rawQuery("SELECT strftime('%Y-%m-%d',occurred_at/1000,'unixepoch','localtime'),direction,SUM($amount) FROM records r WHERE $currentWhere GROUP BY 1,2 ORDER BY 1",matchedArgs.toTypedArray()).use { c ->
             while(c.moveToNext())days.put(JSONObject().put("date",c.getString(0)).put("day",c.getString(0).takeLast(2).toInt()).put("direction",c.getString(1)).put("amount",c.getLong(2)))
         };result.put("days",days)
         result.put("postedCount",store.readableDatabase.rawQuery("SELECT COUNT(*) FROM records r WHERE state='POSTED' AND NOT EXISTS(SELECT 1 FROM record_deletions d WHERE d.record_id=r.id)$scope",null).use { it.moveToFirst();it.getInt(0) })

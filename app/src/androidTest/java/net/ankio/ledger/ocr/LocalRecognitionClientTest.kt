@@ -205,7 +205,8 @@ class LocalRecognitionClientTest {
             assertEquals(2850L, saved.bill.amountCents)
             assertEquals("SUCCEEDED", app.tasks.status(taskId))
             assertArrayEquals(submitted, app.store.screenshot(saved.id))
-            assertFalse(app.packageManager.getPackageInfo(app.packageName,android.content.pm.PackageManager.GET_PERMISSIONS).requestedPermissions.orEmpty().contains("android.permission.INTERNET"))
+            // OCR remains local; the separate updater now needs INTERNET.
+            assertTrue(app.packageManager.getPackageInfo(app.packageName,android.content.pm.PackageManager.GET_PERMISSIONS).requestedPermissions.orEmpty().contains("android.permission.INTERNET"))
         } finally {
             app.tasks.delete(taskId)
             app.store.all().filter { it.id !in before }.forEach { app.store.delete(it.id) }

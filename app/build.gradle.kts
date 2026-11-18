@@ -58,8 +58,11 @@ android {
         applicationId = "net.ankio.ledger"
         minSdk = 30
         targetSdk = 36
-        versionCode = 124
-        versionName = "0.5.118-youshu.3"
+        versionCode = 125
+        versionName = "0.5.119-youshu.1"
+        val updateBase = providers.environmentVariable("YOUSHU_UPDATE_BASE_URL").orNull?.takeIf { it.isNotBlank() } ?: "https://updates.invalid"
+        require(Regex("https://[a-z0-9.-]+").matches(updateBase))
+        buildConfigField("String", "UPDATE_BASE_URL", "\"$updateBase\"")
         buildConfigField("String", "LOCAL_OCR_ENGINE", "\"paddle-v6-tiny\"")
         buildConfigField("String", "LOCAL_OCR_LABEL", "\"PaddleOCR V6 Tiny\"")
         testInstrumentationRunner = providers.gradleProperty("ledgerTestRunner").getOrElse("androidx.test.runner.AndroidJUnitRunner")

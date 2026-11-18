@@ -1,0 +1,25 @@
+name: Renew signed update metadata
+on:
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: signed-update-channel
+  cancel-in-progress: false
+jobs:
+  renew:
+    if: github.repository == 'MisterGaohohoho/youshu-ledger'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Renew only the previously verified release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          UPDATE_MANIFEST_PRIVATE_KEY: ${{ secrets.UPDATE_MANIFEST_PRIVATE_KEY }}
+        run: python scripts/publish-update-manifest.py --renew
