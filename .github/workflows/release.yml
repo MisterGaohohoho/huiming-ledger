@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   release:
-    if: github.repository == 'MisterGaohohoho/huiming-ledger'
+    if: github.repository == 'MisterGaohohoho/youshu-ledger'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:

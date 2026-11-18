@@ -4,7 +4,7 @@ from pathlib import Path
 import zipfile
 
 root = Path(__file__).resolve().parents[1]
-old = '\u82b1\u6709\u8c31'
+old_names = ('\u82b1\u6709\u8c31', '\u6167\u94ed')
 parser = argparse.ArgumentParser()
 parser.add_argument('--apk', type=Path)
 args = parser.parse_args()
@@ -14,13 +14,13 @@ if args.apk:
         for name in archive.namelist():
             if name.endswith('.dex') or name == 'resources.arsc' or name.startswith(('assets/web/', 'res/')):
                 data = archive.read(name)
-                if old.encode() in data or old.encode('utf-16-le') in data:
+                if any(old.encode() in data or old.encode('utf-16-le') in data for old in old_names):
                     found.append(name)
 else:
     for folder in ('app/src/main', 'core/src/main'):
         for path in (root / folder).rglob('*'):
             if path.is_file() and path.suffix in {'.kt', '.java', '.xml', '.html', '.js', '.css', '.json', '.txt'}:
-                if old in path.read_text(encoding='utf-8', errors='replace'):
+                if any(old in path.read_text(encoding='utf-8', errors='replace') for old in old_names):
                     found.append(str(path.relative_to(root)))
 if found:
     raise SystemExit('Previous product name found: ' + ', '.join(found))

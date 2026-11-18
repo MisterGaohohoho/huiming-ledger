@@ -33,7 +33,7 @@ def get(url):
         raise RuntimeError(f'Pinned input unavailable in offline cache: {url}')
     for attempt in range(3):
         try:
-            request = urllib.request.Request(url, headers={'User-Agent': 'Huiming-Ledger-Build'})
+            request = urllib.request.Request(url, headers={'User-Agent': 'Youshu-Ledger-Build'})
             with urllib.request.urlopen(request, timeout=90) as response:
                 return response.read()
         except Exception:

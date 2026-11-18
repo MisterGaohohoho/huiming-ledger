@@ -75,7 +75,7 @@ def main():
             entry = dict(coordinate=coordinate, original_notices=[])
             inventory.append(entry)
         entry['original_notices'].append(dict(file=name, sha256=digest(target)))
-    add_notice('Huiming:Ledger:GPL-3.0-only', 'project-GPL-3.0.txt', ROOT / 'LICENSE')
+    add_notice('Youshu:Ledger:GPL-3.0-only', 'project-GPL-3.0.txt', ROOT / 'LICENSE')
     vendor = ROOT / 'app/src/main/assets/web/vendor'
     analysis_lock = json.loads((vendor / 'analysis-vendor-lock.json').read_text(encoding='utf-8'))
     for name, expected in analysis_lock['files'].items():

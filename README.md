@@ -10,7 +10,7 @@
 
 <p align="center">Android 11+ · 离线 OCR · 本地账本 · GPL-3.0-only</p>
 
-<p align="center"><a href="https://github.com/MisterGaohohoho/huiming-ledger/releases">下载本 Fork APK</a> · <a href="https://github.com/MisterGaohohoho/huiming-ledger/actions/workflows/android.yml">构建与测试</a></p>
+<p align="center"><a href="https://github.com/MisterGaohohoho/youshu-ledger/releases">下载本 Fork APK</a> · <a href="https://github.com/MisterGaohohoho/youshu-ledger/actions/workflows/android.yml">构建与测试</a></p>
 
 本 Fork 基于 [AldenHe/huayoupu-ledger](https://github.com/AldenHe/huayoupu-ledger)，已同步至上游 `ea07c243`（0.5.114-v6）。新增 [Personal-Bill](https://github.com/MisterGaohohoho/Personal-Bill) 月报、年报与平台账单分析的离线适配，直接使用有数的本地账本。版本为 **0.5.117-youshu.2**，以预发布版提供。
 
@@ -100,7 +100,7 @@ V6 Tiny 的检测与识别权重合计约 **5.95 MiB**，V5 mobile 约 **20.37 M
 
 ## 开始使用
 
-1. 从 [最新 Release](https://github.com/MisterGaohohoho/huiming-ledger/releases) 下载 `arm64-v8a.apk` 并安装，在「我的」开启微信 / 支付宝自动识别或摇一摇，按引导完成授权。
+1. 从 [最新 Release](https://github.com/MisterGaohohoho/youshu-ledger/releases) 下载 `arm64-v8a.apk` 并安装，在「我的」开启微信 / 支付宝自动识别或摇一摇，按引导完成授权。
 2. 在支持的支付成功页完成自动记账；漏记时用摇一摇、截图导入或手动补记。
 3. 回到账本核对记录；换机或卸载前，从「账单与备份」导出完整备份。
 

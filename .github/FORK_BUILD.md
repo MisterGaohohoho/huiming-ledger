@@ -11,7 +11,7 @@ Repository variable: `ANDROID_CERT_SHA256` (lowercase SHA-256 certificate digest
 The PKCS12 key alias is `huiming-ledger`. Keep the private signing backup outside
 the repository and preserve it for future updates. Never upload it as an artifact.
 
-Only trusted `main` builds in `MisterGaohohoho/huiming-ledger` receive the signing
+Only trusted `main` builds in `MisterGaohohoho/youshu-ledger` receive the signing
 credentials. Pull requests and feature branches produce unsigned release APKs.
 The build checks the resulting signer against the configured certificate digest.
 
@@ -31,3 +31,9 @@ in-app backup before switching from an upstream-signed installation.
 Current artifacts use the `Youshu-Ledger-` prefix and the application label is 有数.
 The package `net.ankio.ledger` and fork certificate are unchanged, so prior fork
 releases can be upgraded in place without uninstalling.
+
+The GitHub repository is `MisterGaohohoho/youshu-ledger`. After a repository rename,
+update the signing/publishing repository guards, documentation links and local
+`origin` URL together. The PKCS12 alias and `huiming-recognition-diagnostics`
+format identifier retain their original values for compatibility; historical
+release filenames and upstream attribution also retain their original names.

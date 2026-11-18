@@ -3,6 +3,6 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories { google(); mavenCentral() }
 }
-rootProject.name = "HuimingLedger"
+rootProject.name = "YoushuLedger"
 include(":app", ":core", ":paddle-ocr-sdk")
 project(":paddle-ocr-sdk").projectDir = file(".tools/ocr-ab/sdk")
