@@ -30,6 +30,8 @@ SECRET_PATTERNS = {
 
 
 def publishable(name):
+    if name.startswith('tools/update-worker/'):
+        return False
     if '\\' in name:
         return False
     path = PurePosixPath(name)

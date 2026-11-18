@@ -48,6 +48,24 @@ class LedgerBatchDeletionTest {
         assertFalse(store.undoDeleteBatch(deleted.batchId,now+3))
     }
 
+    @Test fun combinedSearchSummariesAndDeletionIncludeBothDirectionsBeyondFirstPage(){
+        store.saveAccount(LedgerAccount(name="合成收支账户",amountCents=100_000))
+        (1..251).forEach { record(it,direction=if(it%2==0)Direction.INCOME else Direction.EXPENSE) }
+        record(999,PaymentApps.ALIPAY)
+        val read=LedgerReadView(store)
+        val first=read.records("all",channel="wechat")
+        assertEquals(200,first.getJSONArray("records").length());assertTrue(first.getBoolean("hasMore"))
+        val total=read.summary("all",channel="wechat",search="合成商户").getJSONObject("totals")
+        assertEquals(12500L,total.getLong("income"));assertEquals(12600L,total.getLong("expense"))
+        val missing=read.summary("all",channel="wechat",search="不存在的商户").getJSONObject("totals")
+        assertEquals(0L,missing.getLong("income"));assertEquals(0L,missing.getLong("expense"))
+        val manager=LedgerBatchDeletion(store);val preview=manager.preview(request(direction=""),now)
+        assertEquals(251,preview.getInt("count"));assertEquals(12500L,preview.getLong("income"));assertEquals(12600L,preview.getLong("expense"))
+        val deletion=manager.commit(preview.getString("token"),now)
+        assertEquals(1,store.all().size);assertTrue(store.undoDeleteBatch(deletion.batchId!!,now+1))
+        assertEquals(252,store.all().size)
+    }
+
     @Test fun changingBillOrFilterMembershipRequiresANewConfirmation(){
         val first=record(1);val manager=LedgerBatchDeletion(store)
         val before=manager.preview(request(),now);record(2)

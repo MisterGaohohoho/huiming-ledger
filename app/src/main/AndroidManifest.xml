@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
@@ -9,8 +11,11 @@
         <package android:name="com.taobao.taobao" />
     </queries>
     <application android:name=".LedgerApp" android:label="有数" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher"
-        android:theme="@style/AppTheme" android:allowBackup="false" android:fullBackupContent="false"
+        android:usesCleartextTraffic="false" android:theme="@style/AppTheme" android:allowBackup="false" android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction_rules" android:supportsRtl="true">
+        <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.updates" android:exported="false" android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/update_file_paths" />
+        </provider>
         <activity android:name=".ui.MainActivity" android:exported="true" android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

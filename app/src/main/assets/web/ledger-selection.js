@@ -8,13 +8,13 @@
  const rowOf=target=>target.closest('[data-record],[data-pending]');
  const idOf=row=>Number(row.dataset.record||row.dataset.pending);
  const selected=id=>all?!excluded.has(id):ids.has(id);
- function request(){return {period:month,search:query,direction:filter==='income'?'INCOME':'EXPENSE',channel:LedgerScope.channel,reimbursement:statsReimbursement,all,ids:[...ids],excluded:[...excluded]}}
+ function request(){return {period:month,search:query,direction:ledgerDirection(),channel:LedgerScope.channel,reimbursement:statsReimbursement,all,ids:[...ids],excluded:[...excluded]}}
  function readSummary(){
   if(!native?.previewBatchDelete)throw Error('请在新版有数中使用批量删除');
   const result=JSON.parse(native.previewBatchDelete(JSON.stringify(request())));
   if(!result.ok)throw Error(result.error||'无法读取所选账单');return result;
  }
- function scopeLabel(){return [query?'全部时间 · 搜索“'+query+'”':LedgerScope.label(month),filter==='income'?'收入':'支出',({'':'全部渠道',wechat:'微信支付',alipay:'支付宝',other:'其他渠道'})[LedgerScope.channel],statsReimbursement==='required'?'需要报销':statsReimbursement==='notRequired'?'不需要报销':''].filter(Boolean).join(' · ')}
+ function scopeLabel(){return [query?'全部时间 · 搜索“'+query+'”':LedgerScope.label(month),filter==='all'?'收支':filter==='income'?'收入':'支出',({'':'全部渠道',wechat:'微信支付',alipay:'支付宝',other:'其他渠道'})[LedgerScope.channel],statsReimbursement==='required'?'需要报销':statsReimbursement==='notRequired'?'不需要报销':''].filter(Boolean).join(' · ')}
  function draw(){
   if(selecting&&scope!==listScope()){cancel();return}
   ledger.classList.toggle('is-selecting',selecting);

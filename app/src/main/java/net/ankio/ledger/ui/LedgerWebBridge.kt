@@ -33,6 +33,9 @@ class LedgerWebBridge(private val activity: MainActivity) {
     private val batchDeletion by lazy { net.ankio.ledger.data.LedgerBatchDeletion(app.store) }
 
     @JavascriptInterface
+    fun openUpdates() { activity.runOnUiThread { activity.updates.show() } }
+
+    @JavascriptInterface
     fun importHistory(offset:Int):String=try { net.ankio.ledger.data.ImportBatches(app.store).list(offset).toString() }
         catch(_:Exception){failure("无法读取导入记录").toString()}
 
@@ -73,7 +76,7 @@ class LedgerWebBridge(private val activity: MainActivity) {
                 val read=LedgerReadView(app.store)
                 val view=read.records(period,search,direction=direction,channel=channel,reimbursement=reimbursement,
                     beforeAt=if(q.has("beforeAt"))q.getLong("beforeAt") else null,beforeId=if(q.has("beforeId"))q.getLong("beforeId") else null)
-                view.put("month",period).put("summary",if(q.has("beforeAt"))JSONObject() else read.summary(period,reimbursement,channel))
+                view.put("month",period).put("summary",if(q.has("beforeAt"))JSONObject() else read.summary(period,reimbursement,channel,search))
                 buildSnapshot(view).put("dataRevision",revision).put("viewKey",json+revision).toString()
             }
         }
