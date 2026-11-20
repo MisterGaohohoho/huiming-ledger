@@ -1,6 +1,6 @@
 # 参与贡献
 
-提交代码前请阅读 [README](README.md)、[NOTICE](NOTICE.md) 与 [LICENSE](LICENSE)。有意提交供项目采用的原创贡献按 GPL-3.0-only 提供；第三方文件保留原始许可、来源及修改说明。不要提交无权公开的内容。
+Read [NOTICE](NOTICE.md), [LICENSE](LICENSE), and the [build reference](.github/REFERENCE.md) before contributing. Original contributions intended for this project are provided under GPL-3.0-only. Third-party files retain their original licenses, attribution, and modification notices. Only submit material you have the right to publish.
 
 ## 开发流程
 

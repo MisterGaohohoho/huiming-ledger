@@ -22,6 +22,17 @@ manual run with `prerelease: true` do not advance the stable channel. The channe
 is an independent `update-channel` branch containing only signed `stable.json`.
 Never replace an already published version with different APK bytes.
 
+The root README is local-only and excluded from Git and public source exports.
+Public release titles and descriptions use English. The signed in-app update
+notes are read separately from `.github/RELEASE_NOTES.md`.
+
+After publishing stable metadata, `scripts/prune-releases.py` verifies the signed
+channel and the latest release assets, then removes other published Release
+entries and their attachments. Git tags and unpublished drafts are retained.
+Prerelease publication does not run cleanup, so it cannot remove assets still
+referenced by the stable updater. The cleanup command defaults to a dry run and
+requires `--apply` to delete releases.
+
 The RSA SHA-256 / PKCS#1 v1.5 signature covers the decoded payload bytes. The
 envelope uses `schemaVersion`, `algorithm`, `keyId`, `payload` and `signature`;
 the last two fields are standard Base64. The signed payload contains relative

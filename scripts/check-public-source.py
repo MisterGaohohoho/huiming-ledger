@@ -14,7 +14,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 DIRECTORIES = {'app', 'core', 'gradle', 'scripts', 'tools', 'third_party', '.github'}
-ROOT_FILES = {'README.md', 'NOTICE.md', 'LICENSE', 'CONTRIBUTING.md', 'SECURITY.md',
+ROOT_FILES = {'NOTICE.md', 'LICENSE', 'CONTRIBUTING.md', 'SECURITY.md',
               '.gitignore', '.gitattributes', 'build.gradle.kts', 'settings.gradle.kts',
               'gradle.properties', 'gradlew', 'gradlew.bat'}
 PRIVATE_PARTS = {'build', 'node_modules', '__pycache__', '.gradle', '.kotlin', '.tools', '.git'}
