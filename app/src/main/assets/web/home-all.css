@@ -1,6 +1,6 @@
 /* Preserve the existing home style; controls wrap instead of squeezing dates. */
 #ledger .home-month{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px}
-#ledger #month{flex:1 1 155px;min-width:0;max-width:100%;white-space:normal;text-align:left}
+#ledger #month{flex:0 1 auto;min-width:0;max-width:100%;white-space:normal;text-align:left}
 #ledger #month h1{white-space:normal;overflow-wrap:anywhere;line-height:1.6}
 #ledger #month i{flex:none}
 #ledger .filter{flex:0 0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));max-width:100%;margin-left:auto}
