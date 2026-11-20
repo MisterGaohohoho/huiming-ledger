@@ -1,6 +1,6 @@
 # 使用、识别与开发说明
 
-[← 返回项目首页](../README.md)
+[Repository](https://github.com/MisterGaohohoho/youshu-ledger)
 
 ## 自动记账覆盖范围
 

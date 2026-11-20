@@ -36,5 +36,9 @@ __pycache__/
 Thumbs.db
 ci-artifacts/
 
+# Local documentation is not part of the public repository or source exports.
+/README.md
+/.local-docs/
+
 # JVM crash dumps are disposable local diagnostics.
 hs_err_pid*.log
