@@ -12,7 +12,7 @@
 
 <p align="center"><a href="https://github.com/MisterGaohohoho/youshu-ledger/releases">下载本 Fork APK</a> · <a href="https://github.com/MisterGaohohoho/youshu-ledger/actions/workflows/android.yml">构建与测试</a></p>
 
-本 Fork 基于 [AldenHe/huayoupu-ledger](https://github.com/AldenHe/huayoupu-ledger)，已同步至上游 `ea07c243`（0.5.114-v6）。新增 [Personal-Bill](https://github.com/MisterGaohohoho/Personal-Bill) 月报、年报与平台账单分析的离线适配，直接使用有数的本地账本。版本为 **0.5.118-youshu.3**，以预发布版提供。
+本 Fork 基于 [AldenHe/huayoupu-ledger](https://github.com/AldenHe/huayoupu-ledger)，已同步至上游 `ea07c243`（0.5.114-v6）。新增 [Personal-Bill](https://github.com/MisterGaohohoho/Personal-Bill) 月报、年报与平台账单分析的离线适配，直接使用有数的本地账本。当前版本为 **0.5.120-youshu.1**，支持应用内检查和下载更新。
 
 在 **我的 → 账单与备份 → 导入账单** 选择文件，自动识别微信、支付宝、洁账 XLSX、通用 CSV 和钱迹格式。首页与统计页共用 **按月 / 按年 / 全部 / 自定义** 时间范围及支付渠道、报销筛选。洁账导入正常计入总账和统计，不单列来源筛选项。账单、分类、退款、报销和账户余额共用原有记账数据，详情编辑后同步刷新。[使用说明与适配范围](.github/OFFLINE_BILLS.md)
 
@@ -52,7 +52,7 @@
 
 ## 版本更新
 
-[0.5.117-youshu.2 更新说明](.github/RELEASE_NOTES.md)
+[0.5.120-youshu.1 更新说明](.github/RELEASE_NOTES.md)
 
 ## 界面预览
 

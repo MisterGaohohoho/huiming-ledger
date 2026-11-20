@@ -4,7 +4,8 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 (async()=>{
  const browser=await chromium.launch({headless:true});
  try{for(const width of [320,393,430]){
-  const page=await browser.newPage({viewport:{width,height:852},reducedMotion:'reduce'}),errors=[],network=[];
+  const page=await browser.newPage({viewport:{width,height:852},reducedMotion:'reduce',timezoneId:'Asia/Shanghai'}),errors=[],network=[];
+  await page.clock.setFixedTime(new Date('2026-11-20T00:30:00+08:00'));
   page.on('pageerror',e=>errors.push(e.message));await page.route('https://**',r=>{network.push(r.request().url());return r.abort()});
   await page.addInitScript(()=>{
    const now=Date.now(),at=new Date(now),month=`${at.getFullYear()}-${String(at.getMonth()+1).padStart(2,'0')}`;
@@ -19,6 +20,9 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
    };
   });
   await page.goto(pathToFileURL(path.resolve(__dirname,'../app/src/main/assets/web/index.html')).href);
+  await page.locator('#month').click();await page.locator('[data-period-mode="custom"]').click();
+  assert.equal(await page.locator('#period-from').inputValue(),'2026-11-20');assert.equal(await page.locator('#period-through').inputValue(),'2026-11-20');
+  await page.locator('#period-cancel').click();assert.equal(await page.evaluate(()=>month),'2026-11','Canceling the date chooser must retain the current scope');
   assert.equal(await page.locator('[data-open-channel],#open-offline-analysis').count(),0);
   assert.equal(await page.evaluate(()=>records.length),20);await page.locator('#load-more-records').click();assert.equal(await page.evaluate(()=>records.length),40);assert.equal(await page.evaluate(()=>snapshotCalls.at(-1).beforeId),20);
   await page.evaluate(()=>openRecord(1));assert.match(await page.locator('#record-provenance').textContent(),/微信支付 · 洁账导入/);
@@ -42,8 +46,12 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
   assert.equal(await page.locator('#integrated-totals').isVisible(),true);assert.equal(await page.locator('#analysis-total').isVisible(),false);
   await page.locator('#stats .month').click();await page.locator('[data-period-mode="all"]').click();await page.locator('#period-apply').click();assert.equal(await page.evaluate(()=>month),'all');
   assert.equal(await page.locator('#stats-change').textContent(),'');
-  await page.locator('#stats .month').click();await page.locator('[data-period-mode="custom"]').click();await page.locator('#period-from').fill('2026-01-01');await page.locator('#period-through').fill('2025-12-01');await page.locator('#period-apply').click();assert.match(await page.locator('#period-error').textContent(),/早于/);
+  await page.locator('#stats .month').click();await page.locator('[data-period-mode="custom"]').click();
+  assert.equal(await page.locator('#period-from').inputValue(),'2026-11-20');assert.equal(await page.locator('#period-through').inputValue(),'2026-11-20');
+  await page.locator('#period-apply').click();assert.equal(await page.evaluate(()=>snapshotCalls.at(-1).period),'2026-11-20..2026-11-20');
+  await page.locator('#stats .month').click();await page.locator('#period-from').fill('2026-01-01');await page.locator('#period-through').fill('2025-12-01');await page.locator('#period-apply').click();assert.match(await page.locator('#period-error').textContent(),/早于/);
   await page.locator('#period-through').fill('2026-12-31');await page.locator('#period-apply').click();assert.equal(await page.evaluate(()=>month),'2026-01-01..2026-12-31');
+  await page.locator('#stats .month').click();assert.equal(await page.locator('#period-from').inputValue(),'2026-01-01');assert.equal(await page.locator('#period-through').inputValue(),'2026-12-31');await page.locator('#period-cancel').click();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   fs.mkdirSync(path.resolve(__dirname,'../.tools/ui-qa'),{recursive:true});await page.locator('#stats').evaluate(e=>e.scrollTop=0);await page.screenshot({path:path.resolve(__dirname,`../.tools/ui-qa/youshu-stats-${width}.png`),fullPage:true});
   await page.evaluate(()=>LedgerUI.event('fontScale',1.5));assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);

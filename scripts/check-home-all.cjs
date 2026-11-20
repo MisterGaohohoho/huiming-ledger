@@ -31,11 +31,15 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
   await page.locator('#batch-cancel').click();await page.locator('#selection-cancel').click();
   await page.evaluate(()=>{month='all';beginManual();$('manual-amount').value='1';$('manual-form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))});
   assert.equal(await page.evaluate(()=>filter),'all','Manual save must retain combined mode');assert.equal(await page.evaluate(()=>month),'all','Manual save inside the scope must retain its dates');
-  await page.evaluate(()=>{month='2026-11-01..2026-11-18';refresh()});
+  await page.evaluate(()=>{month='2026-11';LedgerScope.channel='';refresh()});
   for(const large of [false,true]){
    await page.evaluate(large=>{LedgerUI.event('fontScale',large?1.5:1);ledgerView.summary.totals.income=98765432100;ledgerView.summary.totals.expense=12345678900;render();document.querySelector('#ledger').scrollTop=0;if(large){const sizes=[...document.querySelectorAll('#ledger *')].map(e=>[e,parseFloat(getComputedStyle(e).fontSize)]);sizes.forEach(([e,size])=>e.style.fontSize=(size*1.5)+'px')}},large);
-   const metrics=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>innerWidth,controls:[...document.querySelectorAll('#month,.filter,.balance,#home-combined dd')].map(e=>{const r=e.getBoundingClientRect();return {left:r.left,right:r.right,width:r.width,scroll:e.scrollWidth,client:e.clientWidth}})}));
+   const metrics=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>innerWidth,controls:[...document.querySelectorAll('#month,.filter,.balance,#home-combined dd,#home-count,.summary-trend')].map(e=>{const r=e.getBoundingClientRect();return {left:r.left,right:r.right,width:r.width,scroll:e.scrollWidth,client:e.clientWidth}}),footer:['#home-count','.summary-trend','#monthly-budget'].map(selector=>{const r=document.querySelector(selector).getBoundingClientRect();return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,center:r.top+r.height/2}})}));
    assert.equal(metrics.overflow,false);assert(metrics.controls.every(r=>r.left>=0&&r.right<=width&&r.width>0&&r.scroll<=r.client+1),JSON.stringify(metrics));
+   const [count,trend,budget]=metrics.footer,sameRow=Math.abs(count.center-trend.center)<1;
+   if(!large)assert(sameRow,'Count and trend must share one aligned row: '+JSON.stringify(metrics.footer));
+   assert((sameRow&&count.right+6<=trend.left)||trend.top>=count.bottom,'Footer text must not overlap: '+JSON.stringify(metrics.footer));
+   assert(budget.top>=Math.max(count.bottom,trend.bottom),'Budget must remain below the footer: '+JSON.stringify(metrics.footer));
    if(process.env.UI_SCREENSHOTS)await page.screenshot({path:path.join(process.env.UI_SCREENSHOTS,`home-all-${width}-${large?'large':'normal'}.png`)});
   }
   await page.locator('[data-filter="income"]').click();assert.equal(await page.evaluate(()=>lastQuery.direction),'INCOME');assert.equal(await page.locator('#home-combined').isVisible(),false);

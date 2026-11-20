@@ -15,7 +15,7 @@ import android.view.WindowManager
 import android.widget.*
 
 /** Shared native sheet styling; credentials never need to enter the WebView. */
-class MintDialog(val context: Context, title: String, subtitle: String = "") {
+class MintDialog(val context: Context, title: String, subtitle: String = "", showCloseButton: Boolean = true) {
     private var embedded: EmbeddedModelPage? = null
     private var embeddedDismiss: (() -> Unit)? = null
     val dialog = object:Dialog(context) {
@@ -38,9 +38,12 @@ class MintDialog(val context: Context, title: String, subtitle: String = "") {
         setPadding(0,dp(12),0,0)
     }
     init {
-        val heading = LinearLayout(context).apply { tag="mint-heading";gravity = Gravity.CENTER_VERTICAL; setPadding(dp(22),0,dp(12),0) }
+        val heading = LinearLayout(context).apply {
+            tag="mint-heading"; gravity = Gravity.CENTER_VERTICAL; minimumHeight = dp(48)
+            setPadding(dp(22),0,dp(if(showCloseButton)12 else 22),0)
+        }
         heading.addView(text(title, 21, INK, true), LinearLayout.LayoutParams(0,-2,1f))
-        heading.addView(button("关闭", false).apply { setOnClickListener { dismiss() } }, LinearLayout.LayoutParams(dp(64),dp(48)))
+        if(showCloseButton) heading.addView(button("关闭", false).apply { setOnClickListener { dismiss() } }, LinearLayout.LayoutParams(dp(64),dp(48)))
         root.addView(heading)
         if (subtitle.isNotEmpty()) root.addView(text(subtitle,13,MUTED).apply { setPadding(dp(22),0,dp(22),dp(12)) })
         val scroll = ScrollView(context).apply { isFillViewport = false; addView(content) }

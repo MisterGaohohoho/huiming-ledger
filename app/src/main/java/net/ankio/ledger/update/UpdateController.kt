@@ -27,7 +27,8 @@ class UpdateController(private val activity:MainActivity) {
     }
     private fun page(title:String):MintDialog {
         sheet?.dialog?.setOnDismissListener(null);sheet?.dismiss()
-        return MintDialog(activity,title).also { current -> sheet=current
+        return MintDialog(activity,title,showCloseButton=false).also { current -> sheet=current
+            current.dialog.setCanceledOnTouchOutside(true)
             current.dialog.setOnDismissListener { if(sheet===current){sheet=null;client.cancel();job?.cancel();job=null} }
         }
     }
